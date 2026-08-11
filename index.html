@@ -9,7 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <!-- ============ [ GLOBAL ] ============ -->
   <style>
@@ -528,6 +530,47 @@
     .approval-actions { display: flex; flex-wrap: wrap; gap: 7px; }
     @media (max-width: 1023px) { .admin-layout { grid-template-columns: 1fr; } }
   </style>
+  <style>
+    .mobile-bottom-nav { display: none; }
+    .location-map { height: 280px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-background); }
+    .location-map .leaflet-control-attribution { font-size: 9px; }
+    .location-map-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .schedule-day-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .schedule-roster { display: grid; gap: 8px; max-height: 560px; overflow-y: auto; padding: 2px; }
+    .schedule-roster-row { display: grid; grid-template-columns: 24px minmax(150px, 1fr) 110px minmax(130px, 1fr) minmax(130px, 1fr); gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-background); }
+    .schedule-roster-row.is-off { opacity: 0.68; }
+    .schedule-roster-row .input, .schedule-roster-row .select { min-height: 38px; padding: 8px 9px; font-size: 12px; }
+    .schedule-roster-identity strong { display: block; font-size: 12px; }
+    .schedule-roster-identity span { display: block; margin-top: 2px; color: var(--color-muted); font-size: 10px; }
+    .schedule-ai-box { display: grid; gap: 10px; padding: 13px; border: 1px solid rgba(200, 29, 37, 0.22); border-radius: 14px; background: var(--color-primary-soft); }
+    .schedule-ai-box p { margin: 0; color: var(--color-muted); font-size: 11px; }
+    .schedule-ai-status { min-height: 17px; color: var(--color-muted); font-size: 11px; }
+    .schedule-ai-constraints { display: grid; gap: 10px; padding: 11px; border: 1px solid var(--color-border); border-radius: 11px; background: var(--color-surface); }
+    .schedule-ai-constraints-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .schedule-ai-shifts { display: flex; flex-wrap: wrap; gap: 7px; }
+    .schedule-ai-shift-option { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-muted); font-size: 11px; }
+    .schedule-ai-draft-actions { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 4px; }
+    .request-photo-preview { width: 100%; max-height: 220px; border: 1px solid var(--color-border); border-radius: 12px; object-fit: cover; }
+    @media (max-width: 767px) {
+      .mobile-bottom-nav { position: fixed; z-index: 35; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5, 1fr); padding: 7px max(7px, env(safe-area-inset-left)) max(7px, env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); box-shadow: 0 -8px 24px var(--color-shadow); backdrop-filter: blur(14px); }
+      @supports (background: color-mix(in srgb, white, black)) { .mobile-bottom-nav { background: color-mix(in srgb, var(--color-surface) 94%, transparent); } }
+      .mobile-bottom-nav button { display: grid; min-width: 0; min-height: 48px; place-items: center; gap: 3px; padding: 4px 2px; border: 0; border-radius: 10px; background: transparent; color: var(--color-muted); font-size: 9px; font-weight: 700; }
+      .mobile-bottom-nav button.is-active { background: var(--color-primary-soft); color: var(--color-primary); }
+      .mobile-bottom-nav svg { width: 18px; height: 18px; }
+      .app-main { padding-bottom: 92px; }
+      .page-heading h1 { text-wrap: balance; }
+      .attendance-layout, .request-layout, .admin-layout { gap: 14px; }
+      .camera-frame, .camera-frame video, .camera-frame img { min-height: 270px; }
+      .location-map { height: 230px; }
+      .schedule-day-toolbar { grid-template-columns: 1fr; }
+      .schedule-ai-constraints-grid { grid-template-columns: 1fr; }
+      .schedule-roster { max-height: none; overflow: visible; }
+      .schedule-roster-row { grid-template-columns: 24px minmax(0, 1fr) 96px; }
+      .schedule-roster-row > .schedule-roster-shift, .schedule-roster-row > .schedule-roster-location, .schedule-roster-row > .schedule-roster-notes { grid-column: 2 / -1; }
+      .schedule-roster-row .select, .schedule-roster-row .input { width: 100%; }
+      .table-wrap { border-radius: 12px; }
+    }
+  </style>
 </head>
 
 <body>
@@ -535,7 +578,7 @@
 
   <div id="public-shell" class="public-shell">
     <header class="public-header">
-      <a class="brand" href="#/">
+      <a class="brand" href="#/login">
         <span class="brand-mark" aria-hidden="true">A</span>
         <span>Attendance Management</span>
       </a>
@@ -763,9 +806,16 @@
         <section id="view-admin-pengaturan" class="view" data-view="admin/pengaturan">
           <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">System configuration</p><h1>Pengaturan</h1><p>Pengaturan non-secret yang tersimpan di APP_SETTINGS.</p></div></div><div id="admin-settings-list" class="grid grid-2"></div></div>
         </section>
-      </main>
-    </div>
-  </div>
+       </main>
+     </div>
+     <nav id="mobile-bottom-nav" class="mobile-bottom-nav" aria-label="Navigasi cepat">
+       <button type="button" data-route="dashboard"><i data-lucide="layout-dashboard"></i><span>Beranda</span></button>
+       <button type="button" data-route="absensi"><i data-lucide="scan-face"></i><span>Absensi</span></button>
+       <button type="button" data-route="pengajuan"><i data-lucide="file-pen-line"></i><span>Pengajuan</span></button>
+       <button type="button" data-route="rekap"><i data-lucide="table-2"></i><span>Rekap</span></button>
+       <button type="button" data-route="profil"><i data-lucide="user-round"></i><span>Profil</span></button>
+     </nav>
+   </div>
 
   <div id="app-modal" class="modal-root is-hidden" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
     <div class="modal-backdrop" data-modal-close="true"></div>
@@ -958,6 +1008,31 @@
       };
     }
 
+    function app_fileToPhoto(file) {
+      return new Promise(function (resolve, reject) {
+        if (!file || !file.type || file.type.indexOf('image/') !== 0) { reject(new Error('File harus berupa gambar.')); return; }
+        var reader = new FileReader();
+        reader.onerror = function () { reject(new Error('Foto tidak dapat dibaca.')); };
+        reader.onload = function () {
+          var image = new Image();
+          image.onerror = function () { reject(new Error('Foto tidak dapat diproses.')); };
+          image.onload = function () {
+            var max = 1024;
+            var scale = Math.min(1, max / Math.max(image.width, image.height));
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+            var quality = 0.82; var dataUrl = canvas.toDataURL('image/jpeg', quality);
+            while (dataUrl.length * 0.75 > 1400000 && quality > 0.46) { quality -= 0.08; dataUrl = canvas.toDataURL('image/jpeg', quality); }
+            resolve({ base64: dataUrl, mimeType: 'image/jpeg', capturedAt: new Date().toISOString() });
+          };
+          image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     function app_statusClass(status) {
       var value = String(status || '').toLowerCase();
       if (value.indexOf('tepat') !== -1 || value.indexOf('setuju') !== -1 || value === 'hadir') return 'status-success';
@@ -1064,7 +1139,7 @@
     function app_parseRoute() {
       var raw = window.location.hash.replace(/^#\/?/, '');
       var pieces = raw.split('?');
-      var path = pieces[0].replace(/\/$/, '') || 'home';
+       var path = pieces[0].replace(/\/$/, '') || 'login';
       var query = {};
       if (pieces[1]) {
         new URLSearchParams(pieces[1]).forEach(function (value, key) { query[key] = value; });
@@ -1082,6 +1157,15 @@
       document.querySelectorAll('.app-nav button[data-route]').forEach(function (button) {
         button.classList.toggle('is-active', button.dataset.route === AppState.route);
       });
+    }
+
+    function app_updateLeaveCopy() {
+      var dashboardLink = document.querySelector('#view-dashboard .quick-link[href="#/pengajuan"] span span');
+      if (dashboardLink) dashboardLink.textContent = 'Ajukan izin atau sakit dengan foto bukti';
+      var requestHeading = document.querySelector('#view-pengajuan .page-heading p:not(.eyebrow)');
+      if (requestHeading) requestHeading.textContent = 'Ajukan izin atau sakit dengan foto bukti untuk tanggal yang diperlukan.';
+      var approvalHeading = document.querySelector('#view-admin-pengajuan .page-heading p:not(.eyebrow)');
+      if (approvalHeading) approvalHeading.textContent = 'Review pengajuan izin dan sakit dengan lampiran foto.';
     }
 
     function app_closeSidebar() { byId('app-sidebar').classList.remove('is-open'); }
@@ -1108,11 +1192,24 @@
 
     function app_openPhoto(attendanceId, side) {
       var modal = byId('photo-modal');
+      byId('photo-modal-title').textContent = 'Foto absensi';
       var body = byId('photo-modal-body'); clearElement(body); body.appendChild(createElement('span', 'loading-spinner'));
       modal.classList.remove('is-hidden'); document.body.classList.add('modal-open');
       api_post('GET_PHOTO', { attendanceId: attendanceId, side: side }).then(function (response) {
         clearElement(body);
         var image = document.createElement('img'); image.alt = 'Foto absensi ' + (side === 'OUT' ? 'pulang' : 'datang'); image.src = 'data:' + response.data.mimeType + ';base64,' + response.data.base64; body.appendChild(image);
+      }).catch(function (error) { clearElement(body); body.appendChild(createElement('p', 'muted', error.message)); app_handleError(error); });
+      refreshIcons(); byId('photo-modal-close').focus();
+    }
+
+    function app_openLeavePhoto(requestId) {
+      var modal = byId('photo-modal');
+      byId('photo-modal-title').textContent = 'Foto lampiran pengajuan';
+      var body = byId('photo-modal-body'); clearElement(body); body.appendChild(createElement('span', 'loading-spinner'));
+      modal.classList.remove('is-hidden'); document.body.classList.add('modal-open');
+      api_post('GET_LEAVE_ATTACHMENT', { requestId: requestId }).then(function (response) {
+        clearElement(body);
+        var image = document.createElement('img'); image.alt = 'Foto lampiran pengajuan'; image.src = 'data:' + response.data.mimeType + ';base64,' + response.data.base64; body.appendChild(image);
       }).catch(function (error) { clearElement(body); body.appendChild(createElement('p', 'muted', error.message)); app_handleError(error); });
       refreshIcons(); byId('photo-modal-close').focus();
     }
@@ -1177,6 +1274,7 @@
       byId('public-shell').classList.toggle('is-hidden', isProtected);
       byId('protected-shell').classList.toggle('is-hidden', !isProtected);
       if (isProtected) app_updateHeader();
+      app_updateLeaveCopy();
       document.title = page.title + ' | ' + CONFIG.APP_NAME;
       if (typeof page.render === 'function') page.render();
       if (typeof page.init === 'function') page.init();
@@ -1331,7 +1429,7 @@
         ['Hadir', summary.hadir || 0, 'Termasuk tepat waktu dan terlambat'],
         ['Terlambat', summary.totalLateEvents || 0, 'Kejadian bulan ini'],
         ['Total waktu', summary.totalLateDisplay || '00:00', 'Durasi terlambat'],
-        ['Pengajuan', (summary.izin || 0) + (summary.sakit || 0) + (summary.cuti || 0) + (summary.dinas || 0), 'Disetujui bulan ini']
+        ['Pengajuan', (summary.izin || 0) + (summary.sakit || 0), 'Izin dan sakit disetujui bulan ini']
       ];
       metrics.forEach(function (metric) {
         var card = createElement('div', 'metric-card');
@@ -1562,7 +1660,52 @@
   <!-- ============ [ PAGE: PENGAJUAN ] ============ -->
   <script>
     /* PAGE: PENGAJUAN */
+    var LeavePhotoState = { photo: null };
+
+    function pengajuan_ensurePhotoField() {
+      var form = byId('request-form');
+      if (!form || byId('request-photo')) return;
+      var field = createElement('div', 'form-field');
+      var label = createElement('label', '', 'Foto lampiran'); label.setAttribute('for', 'request-photo'); field.appendChild(label);
+      var input = document.createElement('input'); input.id = 'request-photo'; input.className = 'input'; input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment'; input.required = true; field.appendChild(input);
+      field.appendChild(createElement('small', '', 'Wajib. Pilih foto bukti izin atau sakit dari kamera/galeri.'));
+      var preview = document.createElement('img'); preview.id = 'request-photo-preview'; preview.className = 'request-photo-preview is-hidden'; preview.alt = 'Preview foto lampiran'; field.appendChild(preview);
+      field.appendChild(createElement('span', 'field-error', '')).id = 'request-photo-error';
+      var submit = byId('request-submit'); submit.parentNode.insertBefore(field, submit);
+      input.addEventListener('change', pengajuan_photoSelected);
+    }
+
+    function pengajuan_photoSelected(event) {
+      var input = event.target;
+      var file = input.files && input.files[0];
+      var error = byId('request-photo-error');
+      if (error) error.textContent = '';
+      LeavePhotoState.photo = null;
+      if (!file) { byId('request-photo-preview').classList.add('is-hidden'); return; }
+      app_fileToPhoto(file).then(function (photo) {
+        LeavePhotoState.photo = photo;
+        var preview = byId('request-photo-preview'); preview.src = photo.base64; preview.classList.remove('is-hidden');
+      }).catch(function (reason) {
+        input.value = '';
+        if (error) error.textContent = reason.message;
+        app_toast(reason.message, 'error');
+      });
+    }
+
+    function pengajuan_resetPhoto() {
+      LeavePhotoState.photo = null;
+      var input = byId('request-photo'); var preview = byId('request-photo-preview'); var error = byId('request-photo-error');
+      if (input) input.value = '';
+      if (preview) { preview.src = ''; preview.classList.add('is-hidden'); }
+      if (error) error.textContent = '';
+    }
+
     function pengajuan_render() {
+      pengajuan_ensurePhotoField();
+      var type = byId('request-type');
+      if (type) { type.replaceChildren(); app_option(type, 'IZIN', 'Izin'); app_option(type, 'SAKIT', 'Sakit'); }
+      var copy = document.querySelector('#view-pengajuan .page-heading p:not(.eyebrow)');
+      if (copy) copy.textContent = 'Ajukan izin atau sakit dengan foto bukti untuk tanggal yang diperlukan.';
       if (!byId('request-start-date').value) byId('request-start-date').value = app_dateNow();
       if (!byId('request-end-date').value) byId('request-end-date').value = app_dateNow();
       app_skeleton(byId('request-list'), 3);
@@ -1581,11 +1724,12 @@
     function pengajuan_submit() {
       var button = byId('request-submit');
       var payload = { type: byId('request-type').value, startDate: byId('request-start-date').value, endDate: byId('request-end-date').value, reason: byId('request-reason').value.trim() };
-      if (!payload.startDate || !payload.endDate || !payload.reason) { app_toast('Tanggal dan keterangan wajib diisi.', 'error'); return; }
+      if (LeavePhotoState.photo) { payload.photoBase64 = LeavePhotoState.photo.base64; payload.mimeType = LeavePhotoState.photo.mimeType; payload.capturedAt = LeavePhotoState.photo.capturedAt; }
+      if (!payload.startDate || !payload.endDate || !payload.reason || !LeavePhotoState.photo) { app_toast('Tanggal, keterangan, dan foto lampiran wajib diisi.', 'error'); return; }
       if (payload.startDate > payload.endDate) { app_toast('Tanggal selesai tidak boleh sebelum tanggal mulai.', 'error'); return; }
       app_buttonLoading(button, true, 'Mengirim...');
       api_post('CREATE_LEAVE_REQUEST', payload).then(function (response) {
-        app_toast(response.message, 'success'); byId('request-reason').value = ''; LocalCache.clearMutable(); pengajuan_load(1);
+        app_toast(response.message, 'success'); byId('request-form').reset(); pengajuan_resetPhoto(); LocalCache.clearMutable(); pengajuan_render(); pengajuan_load(1);
       }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
     }
 
@@ -1599,7 +1743,7 @@
       }).catch(function (error) { app_errorState(container, error.message, pengajuan_load); app_handleError(error); });
     }
 
-    function pengajuan_typeLabel(type) { return ({ IZIN: 'Izin', SAKIT: 'Sakit', CUTI: 'Cuti', DINAS: 'Dinas' })[type] || type; }
+    function pengajuan_typeLabel(type) { return ({ IZIN: 'Izin', SAKIT: 'Sakit' })[type] || type; }
 
     function pengajuan_renderList(requests) {
       var container = byId('request-list'); clearElement(container);
@@ -1612,6 +1756,7 @@
         item.appendChild(header);
         item.appendChild(createElement('p', '', request.reason || 'Tanpa keterangan'));
         var meta = createElement('div', 'request-item-meta'); meta.appendChild(createElement('span', '', app_displayDate(request.startDate) + ' - ' + app_displayDate(request.endDate))); if (request.reviewedAt) meta.appendChild(createElement('span', '', 'Diproses ' + app_displayDateTime(request.reviewedAt))); item.appendChild(meta);
+        if (request.hasAttachment) { var attachment = createElement('button', 'button button-secondary button-small', 'Lihat foto'); attachment.type = 'button'; attachment.style.marginTop = '10px'; attachment.addEventListener('click', function () { app_openLeavePhoto(request.id); }); item.appendChild(attachment); }
         if (request.reviewerNote) item.appendChild(createElement('p', '', 'Catatan reviewer: ' + request.reviewerNote));
         if (request.status === 'PENDING') { var cancel = createElement('button', 'button button-ghost button-small', 'Batalkan'); cancel.type = 'button'; cancel.style.marginTop = '10px'; cancel.addEventListener('click', function () { app_confirm('Batalkan pengajuan?', 'Pengajuan ini akan berubah menjadi dibatalkan.', 'Batalkan', function () { pengajuan_cancel(request.id); }, true); }); item.appendChild(cancel); }
         container.appendChild(item);
@@ -1816,8 +1961,61 @@
   <script>
     /* PAGE: ADMIN-LOKASI */
     var AdminLocationState = { page: 1, search: '', rows: [] };
+    var AdminLocationMapState = { map: null, marker: null, circle: null };
 
-    function adminLocation_render() { adminLocation_resetForm(); }
+    function adminLocation_ensureMap() {
+      if (byId('admin-location-map')) return;
+      var latitude = byId('admin-location-latitude');
+      if (!latitude || !latitude.parentNode || !latitude.parentNode.parentNode) return;
+      var field = createElement('div', 'form-field');
+      field.appendChild(createElement('label', '', 'Pin lokasi pada peta'));
+      var map = createElement('div', 'location-map'); map.id = 'admin-location-map'; map.setAttribute('role', 'application'); map.setAttribute('aria-label', 'Peta untuk memilih titik lokasi'); field.appendChild(map);
+      var actions = createElement('div', 'location-map-actions');
+      var current = createElement('button', 'button button-secondary button-small', 'Gunakan lokasi perangkat'); current.type = 'button'; current.id = 'admin-location-use-current'; actions.appendChild(current);
+      field.appendChild(actions);
+      field.appendChild(createElement('small', '', 'Klik peta untuk memilih titik. Latitude dan longitude akan terisi otomatis.'));
+      latitude.parentNode.parentNode.parentNode.insertBefore(field, latitude.parentNode.parentNode);
+    }
+
+    function adminLocation_updateCircle() {
+      if (!AdminLocationMapState.circle) return;
+      var radius = Number(byId('admin-location-radius').value) || 100;
+      AdminLocationMapState.circle.setRadius(radius);
+    }
+
+    function adminLocation_setPoint(latitude, longitude, zoom) {
+      latitude = Number(latitude); longitude = Number(longitude);
+      if (!isFinite(latitude) || !isFinite(longitude)) return;
+      byId('admin-location-latitude').value = latitude.toFixed(6);
+      byId('admin-location-longitude').value = longitude.toFixed(6);
+      if (!AdminLocationMapState.map || !window.L) return;
+      var point = [latitude, longitude];
+      if (!AdminLocationMapState.marker) AdminLocationMapState.marker = L.marker(point, { title: 'Titik lokasi absensi' }).addTo(AdminLocationMapState.map);
+      else AdminLocationMapState.marker.setLatLng(point);
+      if (!AdminLocationMapState.circle) AdminLocationMapState.circle = L.circle(point, { color: '#C81D25', fillColor: '#C81D25', fillOpacity: 0.14, weight: 2 }).addTo(AdminLocationMapState.map);
+      else AdminLocationMapState.circle.setLatLng(point);
+      adminLocation_updateCircle();
+      AdminLocationMapState.map.setView(point, zoom || Math.max(AdminLocationMapState.map.getZoom(), 15));
+    }
+
+    function adminLocation_initMap() {
+      if (!window.L || !byId('admin-location-map')) return;
+      if (!AdminLocationMapState.map) {
+        AdminLocationMapState.map = L.map('admin-location-map').setView([-6.200000, 106.816666], 12);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(AdminLocationMapState.map);
+        AdminLocationMapState.map.on('click', function (event) { adminLocation_setPoint(event.latlng.lat, event.latlng.lng); });
+        byId('admin-location-radius').addEventListener('input', adminLocation_updateCircle);
+        byId('admin-location-use-current').addEventListener('click', function () {
+          if (!navigator.geolocation) { app_toast('Browser tidak mendukung GPS.', 'error'); return; }
+          navigator.geolocation.getCurrentPosition(function (position) { adminLocation_setPoint(position.coords.latitude, position.coords.longitude, 16); }, function () { app_toast('Lokasi perangkat tidak dapat dibaca.', 'error'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+        });
+      }
+      window.setTimeout(function () { AdminLocationMapState.map.invalidateSize(); }, 80);
+      var latitude = Number(byId('admin-location-latitude').value); var longitude = Number(byId('admin-location-longitude').value);
+      if (isFinite(latitude) && isFinite(longitude)) adminLocation_setPoint(latitude, longitude);
+    }
+
+    function adminLocation_render() { adminLocation_ensureMap(); adminLocation_resetForm(); }
 
     function adminLocation_init() {
       var form = byId('admin-location-form');
@@ -1827,11 +2025,15 @@
         byId('admin-location-refresh').addEventListener('click', function () { adminLocation_load(1); });
         byId('admin-location-search').addEventListener('input', app_debounce(function () { AdminLocationState.search = byId('admin-location-search').value.trim(); adminLocation_load(1); }, 350));
       }
+      adminLocation_initMap();
       adminLocation_load(AdminLocationState.page || 1);
     }
 
     function adminLocation_resetForm() {
       byId('admin-location-form').reset(); byId('admin-location-id').value = ''; byId('admin-location-radius').value = 100; byId('admin-location-accuracy').value = 100; byId('admin-location-submit').textContent = 'Simpan lokasi';
+      if (AdminLocationMapState.marker && AdminLocationMapState.map) { AdminLocationMapState.map.removeLayer(AdminLocationMapState.marker); AdminLocationMapState.marker = null; }
+      if (AdminLocationMapState.circle && AdminLocationMapState.map) { AdminLocationMapState.map.removeLayer(AdminLocationMapState.circle); AdminLocationMapState.circle = null; }
+      if (AdminLocationMapState.map) { AdminLocationMapState.map.setView([-6.200000, 106.816666], 12); window.setTimeout(function () { AdminLocationMapState.map.invalidateSize(); }, 50); }
     }
 
     function adminLocation_load(page) {
@@ -1854,7 +2056,7 @@
     }
 
     function adminLocation_edit(location) {
-      byId('admin-location-id').value = location.id; byId('admin-location-name').value = location.name || ''; byId('admin-location-address').value = location.address || ''; byId('admin-location-latitude').value = location.latitude; byId('admin-location-longitude').value = location.longitude; byId('admin-location-radius').value = location.radiusM; byId('admin-location-accuracy').value = location.maxAccuracyM; byId('admin-location-notes').value = location.notes || ''; byId('admin-location-submit').textContent = 'Perbarui lokasi'; window.scrollTo({ top: 0, behavior: 'smooth' });
+      byId('admin-location-id').value = location.id; byId('admin-location-name').value = location.name || ''; byId('admin-location-address').value = location.address || ''; byId('admin-location-radius').value = location.radiusM; byId('admin-location-accuracy').value = location.maxAccuracyM; byId('admin-location-notes').value = location.notes || ''; adminLocation_setPoint(location.latitude, location.longitude); byId('admin-location-submit').textContent = 'Perbarui lokasi'; window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function adminLocation_submit() {
@@ -1933,37 +2135,188 @@
   <!-- ============ [ PAGE: ADMIN-JADWAL ] ============ -->
   <script>
     /* PAGE: ADMIN-JADWAL */
-    var AdminScheduleState = { page: 1, users: [], shifts: [], locations: [] };
+    var AdminScheduleState = { page: 1, users: [], shifts: [], locations: [], currentDate: '', aiDraft: null };
+
+    function adminSchedule_buildForm() {
+      var form = byId('admin-schedule-form');
+      if (!form || form.dataset.dayReady === 'true') return;
+      form.dataset.dayReady = 'true';
+      form.innerHTML = '<div><p class="eyebrow">Daily roster</p><h2 class="section-title">Atur jadwal per hari</h2><p class="muted" style="margin:0;font-size:12px">Pilih satu tanggal, centang karyawan yang perlu diatur, lalu simpan sekaligus.</p></div>' +
+        '<div class="schedule-day-toolbar"><div class="form-field"><label for="admin-schedule-day-date">Tanggal</label><input id="admin-schedule-day-date" class="input" type="date" required></div><div class="form-field"><label for="admin-schedule-default-shift">Shift default</label><select id="admin-schedule-default-shift" class="select"></select></div><div class="form-field"><label for="admin-schedule-default-location">Lokasi default</label><select id="admin-schedule-default-location" class="select"></select></div></div>' +
+        '<div class="cluster"><button id="admin-schedule-select-all" class="button button-secondary button-small" type="button">Pilih semua karyawan</button><button id="admin-schedule-clear-all" class="button button-ghost button-small" type="button">Kosongkan pilihan</button><button id="admin-schedule-apply-default" class="button button-secondary button-small" type="button">Terapkan default</button></div>' +
+        '<div class="schedule-ai-box"><div class="cluster"><strong><i data-lucide="sparkles"></i> Buat saran dengan AI</strong><span id="admin-schedule-ai-status" class="schedule-ai-status">Memeriksa konfigurasi AI...</span></div><p>AI membuat draft berdasarkan master dan batasan Anda. Draft tidak masuk ke master sebelum Anda memilih Terapkan.</p><div class="schedule-ai-constraints"><strong>Batasan dan logika</strong><div class="schedule-ai-constraints-grid"><div class="form-field"><label for="admin-schedule-ai-min">Minimum orang per shift</label><input id="admin-schedule-ai-min" class="input" type="number" min="0" max="1000" placeholder="Tidak dibatasi"></div><div class="form-field"><label for="admin-schedule-ai-max">Maksimum orang per shift</label><input id="admin-schedule-ai-max" class="input" type="number" min="0" max="1000" placeholder="Tidak dibatasi"></div></div><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-balance" type="checkbox" checked> Seimbangkan distribusi antar shift</label><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-allow-off" type="checkbox" checked> Izinkan AI memberi jadwal libur</label><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-preserve" type="checkbox" checked> Pertahankan jadwal yang sudah ada</label><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-department" type="checkbox"> Sebar departemen agar tidak menumpuk di satu shift</label><div><label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700">Shift yang boleh dipakai (kosongkan untuk semua)</label><div id="admin-schedule-ai-shifts" class="schedule-ai-shifts"></div></div></div><textarea id="admin-schedule-ai-prompt" class="textarea" maxlength="1500" placeholder="Aturan tambahan, contoh: tim gudang harus masuk pagi; jangan tempatkan supervisor pada shift malam."></textarea><div class="cluster"><button id="admin-schedule-ai" class="button button-secondary" type="button"><i data-lucide="sparkles"></i>Buat draft AI</button><span id="admin-schedule-ai-result" class="schedule-ai-status"></span></div><div id="admin-schedule-ai-reasoning" class="schedule-ai-status"></div><div id="admin-schedule-ai-draft-actions" class="schedule-ai-draft-actions is-hidden"><button id="admin-schedule-ai-apply" class="button button-primary button-small" type="button"><i data-lucide="check"></i>Terapkan ke master jadwal</button><button id="admin-schedule-ai-discard" class="button button-ghost button-small" type="button">Abaikan draft</button></div></div>' +
+        '<div id="admin-schedule-roster" class="schedule-roster"></div>' +
+        '<button id="admin-schedule-submit" class="button button-primary button-block" type="submit"><i data-lucide="save"></i>Simpan jadwal harian</button>';
+      refreshIcons();
+    }
 
     function adminSchedule_render() {
+      adminSchedule_buildForm();
       if (!byId('admin-schedule-month').value) byId('admin-schedule-month').value = app_monthNow();
-      if (!byId('admin-schedule-date').value) byId('admin-schedule-date').value = app_dateNow();
-      adminSchedule_toggleWorkFields();
+      if (!byId('admin-schedule-day-date').value) byId('admin-schedule-day-date').value = app_dateNow();
     }
 
     function adminSchedule_init() {
+      adminSchedule_buildForm();
       var form = byId('admin-schedule-form');
       if (form.dataset.bound !== 'true') {
-        form.dataset.bound = 'true'; form.addEventListener('submit', function (event) { event.preventDefault(); adminSchedule_submit(); });
-        byId('admin-schedule-type').addEventListener('change', adminSchedule_toggleWorkFields);
+        form.dataset.bound = 'true';
+        form.addEventListener('submit', function (event) { event.preventDefault(); adminSchedule_submit(); });
+        byId('admin-schedule-day-date').addEventListener('change', adminSchedule_loadDay);
+        byId('admin-schedule-select-all').addEventListener('click', function () { document.querySelectorAll('#admin-schedule-roster .schedule-roster-check').forEach(function (input) { input.checked = true; }); });
+        byId('admin-schedule-clear-all').addEventListener('click', function () { document.querySelectorAll('#admin-schedule-roster .schedule-roster-check').forEach(function (input) { input.checked = false; }); });
+        byId('admin-schedule-apply-default').addEventListener('click', adminSchedule_applyDefault);
+        byId('admin-schedule-ai').addEventListener('click', adminSchedule_generateAi);
+        byId('admin-schedule-ai-apply').addEventListener('click', adminSchedule_applyAiDraft);
+        byId('admin-schedule-ai-discard').addEventListener('click', adminSchedule_discardAiDraft);
         byId('admin-schedule-refresh').addEventListener('click', function () { adminSchedule_load(1); });
         byId('admin-schedule-month').addEventListener('change', function () { adminSchedule_load(1); });
       }
       adminSchedule_loadMasters();
     }
 
-    function adminSchedule_toggleWorkFields() { byId('admin-schedule-work-fields').classList.toggle('is-hidden', byId('admin-schedule-type').value === 'OFF'); }
+    function adminSchedule_populateMasters() {
+      var shiftSelect = byId('admin-schedule-default-shift'); var locationSelect = byId('admin-schedule-default-location');
+      clearElement(shiftSelect); clearElement(locationSelect);
+      app_option(shiftSelect, '', 'Pilih shift'); app_option(locationSelect, '', 'Pilih lokasi');
+      AdminScheduleState.shifts.filter(function (shift) { return shift.isActive; }).forEach(function (shift) { app_option(shiftSelect, shift.id, shift.name + ' | ' + shift.startTime + ' - ' + shift.endTime); });
+      AdminScheduleState.locations.filter(function (location) { return location.isActive; }).forEach(function (location) { app_option(locationSelect, location.id, location.name); });
+      adminSchedule_renderAiShiftOptions();
+    }
+
+    function adminSchedule_renderAiShiftOptions() {
+      var container = byId('admin-schedule-ai-shifts'); if (!container) return;
+      clearElement(container);
+      AdminScheduleState.shifts.filter(function (shift) { return shift.isActive; }).forEach(function (shift) {
+        var label = createElement('label', 'schedule-ai-shift-option');
+        var input = document.createElement('input'); input.type = 'checkbox'; input.className = 'admin-schedule-ai-shift'; input.value = shift.id; label.appendChild(input); label.appendChild(createElement('span', '', shift.name)); container.appendChild(label);
+      });
+    }
 
     function adminSchedule_loadMasters() {
       Promise.all([api_post('LIST_USERS', { page: 1, limit: 100, role: 'EMPLOYEE', isActive: true }), api_post('LIST_SHIFTS', { page: 1, limit: 100 }), api_post('LIST_LOCATIONS', { page: 1, limit: 100 })]).then(function (responses) {
         AdminScheduleState.users = responses[0].data || []; AdminScheduleState.shifts = responses[1].data || []; AdminScheduleState.locations = responses[2].data || [];
-        var userSelect = byId('admin-schedule-user'); var shiftSelect = byId('admin-schedule-shift'); var locationSelect = byId('admin-schedule-location');
-        clearElement(userSelect); clearElement(shiftSelect); clearElement(locationSelect);
-        AdminScheduleState.users.forEach(function (user) { app_option(userSelect, user.id, user.employeeCode + ' - ' + user.name); });
-        AdminScheduleState.shifts.filter(function (shift) { return shift.isActive; }).forEach(function (shift) { app_option(shiftSelect, shift.id, shift.name + ' | ' + shift.startTime + ' - ' + shift.endTime); });
-        AdminScheduleState.locations.filter(function (location) { return location.isActive; }).forEach(function (location) { app_option(locationSelect, location.id, location.name); });
+        adminSchedule_populateMasters();
+        adminSchedule_loadDay();
         adminSchedule_load(1);
+        return api_post('GET_AI_STATUS', {});
+      }).then(function (response) {
+        if (response && response.data) byId('admin-schedule-ai-status').textContent = response.data.configured ? 'AI aktif: ' + response.data.model : 'AI belum dikonfigurasi';
       }).catch(function (error) { app_handleError(error); });
+    }
+
+    function adminSchedule_rowToggle(row) {
+      var type = row.querySelector('.schedule-roster-type'); var isOff = type && type.value === 'OFF';
+      row.classList.toggle('is-off', isOff);
+      row.querySelector('.schedule-roster-shift').disabled = isOff;
+      row.querySelector('.schedule-roster-location').disabled = isOff;
+    }
+
+    function adminSchedule_renderRoster(schedules) {
+      var container = byId('admin-schedule-roster'); clearElement(container);
+      var existing = {}; (schedules || []).forEach(function (schedule) { existing[schedule.userId] = schedule; });
+      if (!AdminScheduleState.users.length) { app_empty(container, 'Belum ada karyawan aktif.', 'users'); return; }
+      AdminScheduleState.users.forEach(function (user) {
+        var schedule = existing[user.id];
+        var row = createElement('div', 'schedule-roster-row'); row.dataset.scheduleRow = 'true'; row.dataset.userId = user.id;
+        var check = document.createElement('input'); check.type = 'checkbox'; check.className = 'schedule-roster-check'; check.checked = Boolean(schedule); check.setAttribute('aria-label', 'Pilih ' + user.name); row.appendChild(check);
+        var identity = createElement('div', 'schedule-roster-identity'); identity.appendChild(createElement('strong', '', user.name)); identity.appendChild(createElement('span', '', user.employeeCode + (user.department ? ' | ' + user.department : ''))); row.appendChild(identity);
+        var type = document.createElement('select'); type.className = 'select schedule-roster-type'; app_option(type, 'WORK', 'Kerja'); app_option(type, 'OFF', 'Libur'); type.value = schedule ? schedule.scheduleType : 'WORK'; type.addEventListener('change', function () { adminSchedule_rowToggle(row); }); row.appendChild(type);
+        var shift = document.createElement('select'); shift.className = 'select schedule-roster-shift'; app_option(shift, '', 'Pilih shift'); AdminScheduleState.shifts.filter(function (item) { return item.isActive; }).forEach(function (item) { app_option(shift, item.id, item.name + ' | ' + item.startTime + '-' + item.endTime); }); shift.value = schedule ? schedule.shiftId || '' : byId('admin-schedule-default-shift').value; row.appendChild(shift);
+        var location = document.createElement('select'); location.className = 'select schedule-roster-location'; app_option(location, '', 'Pilih lokasi'); AdminScheduleState.locations.filter(function (item) { return item.isActive; }).forEach(function (item) { app_option(location, item.id, item.name); }); location.value = schedule && schedule.location ? schedule.location.id : byId('admin-schedule-default-location').value; row.appendChild(location);
+        var notes = document.createElement('input'); notes.className = 'input schedule-roster-notes'; notes.type = 'text'; notes.maxLength = 500; notes.placeholder = 'Catatan'; notes.value = schedule ? schedule.notes || '' : ''; row.appendChild(notes);
+        container.appendChild(row); adminSchedule_rowToggle(row);
+      });
+      refreshIcons();
+    }
+
+    function adminSchedule_loadDay() {
+      var date = byId('admin-schedule-day-date').value;
+      if (!date || !AdminScheduleState.users.length) return Promise.resolve();
+      if (AdminScheduleState.currentDate && AdminScheduleState.currentDate !== date) adminSchedule_clearAiDraftUi();
+      AdminScheduleState.currentDate = date;
+      app_skeleton(byId('admin-schedule-roster'), 5);
+      return api_post('LIST_SCHEDULES', { workDate: date, page: 1, limit: 100 }).then(function (response) { adminSchedule_renderRoster(response.data || []); }).catch(function (error) { app_errorState(byId('admin-schedule-roster'), error.message, adminSchedule_loadDay); app_handleError(error); });
+    }
+
+    function adminSchedule_applyDefault() {
+      var shiftId = byId('admin-schedule-default-shift').value; var locationId = byId('admin-schedule-default-location').value; var selected = document.querySelectorAll('#admin-schedule-roster .schedule-roster-check:checked');
+      if (!selected.length) { app_toast('Pilih karyawan terlebih dahulu.', 'error'); return; }
+      if (!shiftId || !locationId) { app_toast('Pilih shift dan lokasi default terlebih dahulu.', 'error'); return; }
+      selected.forEach(function (check) { var row = check.closest('[data-schedule-row]'); row.querySelector('.schedule-roster-type').value = 'WORK'; row.querySelector('.schedule-roster-shift').value = shiftId; row.querySelector('.schedule-roster-location').value = locationId; adminSchedule_rowToggle(row); });
+    }
+
+    function adminSchedule_findRow(userId) {
+      var rows = document.querySelectorAll('#admin-schedule-roster [data-schedule-row]');
+      for (var i = 0; i < rows.length; i++) if (rows[i].dataset.userId === userId) return rows[i];
+      return null;
+    }
+
+    function adminSchedule_readAiConstraints() {
+      var min = Number(byId('admin-schedule-ai-min').value || 0); var max = Number(byId('admin-schedule-ai-max').value || 0);
+      if (!isFinite(min) || min < 0 || Math.floor(min) !== min) min = 0;
+      if (!isFinite(max) || max < 0 || Math.floor(max) !== max) max = 0;
+      return {
+        minStaffPerShift: min, maxStaffPerShift: max,
+        preferredShiftIds: Array.prototype.slice.call(document.querySelectorAll('.admin-schedule-ai-shift:checked')).map(function (input) { return input.value; }),
+        balanceShifts: byId('admin-schedule-ai-balance').checked,
+        allowOff: byId('admin-schedule-ai-allow-off').checked,
+        preserveExisting: byId('admin-schedule-ai-preserve').checked,
+        avoidSameDepartment: byId('admin-schedule-ai-department').checked,
+        logic: byId('admin-schedule-ai-prompt').value.trim()
+      };
+    }
+
+    function adminSchedule_clearAiDraftUi() {
+      AdminScheduleState.aiDraft = null;
+      byId('admin-schedule-ai-draft-actions').classList.add('is-hidden');
+      byId('admin-schedule-ai-reasoning').textContent = '';
+      byId('admin-schedule-ai-result').textContent = '';
+    }
+
+    function adminSchedule_applyAiPlan(data) {
+      var assignments = data && Array.isArray(data.assignments) ? data.assignments : [];
+      AdminScheduleState.aiDraft = { workDate: data.workDate, assignments: assignments.slice(), warnings: (data.warnings || []).slice(), reasoning: data.reasoning || '', constraints: data.constraints || null };
+      assignments.forEach(function (assignment) {
+        var row = adminSchedule_findRow(assignment.userId); if (!row) return;
+        row.querySelector('.schedule-roster-check').checked = true;
+        row.querySelector('.schedule-roster-type').value = assignment.scheduleType || 'WORK';
+        row.querySelector('.schedule-roster-shift').value = assignment.shiftId || '';
+        row.querySelector('.schedule-roster-location').value = assignment.locationId || '';
+        row.querySelector('.schedule-roster-notes').value = assignment.notes || '';
+        adminSchedule_rowToggle(row);
+      });
+      var warnings = data && data.warnings && data.warnings.length ? ' ' + data.warnings.join(' ') : '';
+      byId('admin-schedule-ai-result').textContent = assignments.length + ' saran menjadi draft. Belum disimpan ke master.' + warnings;
+      byId('admin-schedule-ai-reasoning').textContent = data.reasoning ? 'Logika AI: ' + data.reasoning : '';
+      byId('admin-schedule-ai-draft-actions').classList.remove('is-hidden');
+      if (warnings) app_toast('AI memberi beberapa peringatan. Periksa roster.', 'info');
+    }
+
+    function adminSchedule_discardAiDraft() {
+      adminSchedule_clearAiDraftUi();
+      adminSchedule_loadDay();
+      app_toast('Draft AI diabaikan. Master jadwal tidak berubah.', 'info');
+    }
+
+    function adminSchedule_applyAiDraft() {
+      var draft = AdminScheduleState.aiDraft;
+      if (!draft || !draft.assignments.length) { app_toast('Belum ada draft AI untuk diterapkan.', 'error'); return; }
+      var button = byId('admin-schedule-ai-apply'); app_buttonLoading(button, true, 'Menerapkan...');
+      api_post('APPLY_AI_SCHEDULE', { workDate: draft.workDate, items: draft.assignments }).then(function (response) {
+        var failures = (response.data || []).filter(function (item) { return item && item.success === false; });
+        app_toast(failures.length ? failures.length + ' jadwal gagal diterapkan.' : response.message, failures.length ? 'error' : 'success');
+        if (!failures.length) adminSchedule_clearAiDraftUi();
+        LocalCache.clearMutable(); adminSchedule_loadDay(); adminSchedule_load(AdminScheduleState.page);
+      }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function adminSchedule_generateAi() {
+      var date = byId('admin-schedule-day-date').value; if (!date) { app_toast('Pilih tanggal jadwal.', 'error'); return; }
+      var constraints = adminSchedule_readAiConstraints();
+      if (constraints.minStaffPerShift && constraints.maxStaffPerShift && constraints.minStaffPerShift > constraints.maxStaffPerShift) { app_toast('Minimum orang per shift tidak boleh melebihi maksimum.', 'error'); return; }
+      var button = byId('admin-schedule-ai'); app_buttonLoading(button, true, 'Menyusun...'); byId('admin-schedule-ai-result').textContent = '';
+      api_post('GENERATE_AI_SCHEDULE', { workDate: date, constraints: constraints }).then(function (response) { adminSchedule_applyAiPlan(response.data || {}); app_toast(response.message, 'success'); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
     }
 
     function adminSchedule_load(page) {
@@ -1982,14 +2335,24 @@
     }
 
     function adminSchedule_edit(schedule) {
-      byId('admin-schedule-user').value = schedule.userId || ''; byId('admin-schedule-date').value = schedule.workDate || ''; byId('admin-schedule-type').value = schedule.scheduleType || 'WORK'; byId('admin-schedule-shift').value = schedule.shiftId || ''; byId('admin-schedule-location').value = schedule.location ? schedule.location.id : ''; byId('admin-schedule-notes').value = schedule.notes || ''; adminSchedule_toggleWorkFields(); window.scrollTo({ top: 0, behavior: 'smooth' });
+      byId('admin-schedule-day-date').value = schedule.workDate || '';
+      adminSchedule_loadDay().then(function () {
+        var row = adminSchedule_findRow(schedule.userId); if (!row) return;
+        row.querySelector('.schedule-roster-check').checked = true; row.querySelector('.schedule-roster-type').value = schedule.scheduleType || 'WORK'; row.querySelector('.schedule-roster-shift').value = schedule.shiftId || ''; row.querySelector('.schedule-roster-location').value = schedule.location ? schedule.location.id : ''; row.querySelector('.schedule-roster-notes').value = schedule.notes || ''; adminSchedule_rowToggle(row); window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     }
 
     function adminSchedule_submit() {
-      var payload = { userId: byId('admin-schedule-user').value, workDate: byId('admin-schedule-date').value, scheduleType: byId('admin-schedule-type').value, shiftId: byId('admin-schedule-shift').value, locationId: byId('admin-schedule-location').value, notes: byId('admin-schedule-notes').value.trim() };
-      if (!payload.userId || !payload.workDate || (payload.scheduleType === 'WORK' && (!payload.shiftId || !payload.locationId))) { app_toast('Lengkapi assignment jadwal.', 'error'); return; }
+      var date = byId('admin-schedule-day-date').value; var items = [];
+      document.querySelectorAll('#admin-schedule-roster [data-schedule-row]').forEach(function (row) {
+        if (!row.querySelector('.schedule-roster-check').checked) return;
+        items.push({ userId: row.dataset.userId, workDate: date, scheduleType: row.querySelector('.schedule-roster-type').value, shiftId: row.querySelector('.schedule-roster-shift').value, locationId: row.querySelector('.schedule-roster-location').value, notes: row.querySelector('.schedule-roster-notes').value.trim() });
+      });
+      if (!date || !items.length) { app_toast('Pilih tanggal dan minimal satu karyawan.', 'error'); return; }
+      var invalid = items.some(function (item) { return item.scheduleType === 'WORK' && (!item.shiftId || !item.locationId); });
+      if (invalid) { app_toast('Setiap karyawan dengan status kerja wajib memiliki shift dan lokasi.', 'error'); return; }
       var button = byId('admin-schedule-submit'); app_buttonLoading(button, true, 'Menyimpan...');
-      api_post('UPSERT_SCHEDULE', payload).then(function (response) { app_toast(response.message, 'success'); LocalCache.clearMutable(); adminSchedule_load(AdminScheduleState.page); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+      api_post('BULK_UPSERT_SCHEDULES', { items: items }).then(function (response) { var failures = (response.data || []).filter(function (item) { return item && item.success === false; }); app_toast(failures.length ? failures.length + ' jadwal gagal disimpan.' : response.message, failures.length ? 'error' : 'success'); if (!failures.length) adminSchedule_clearAiDraftUi(); LocalCache.clearMutable(); adminSchedule_loadDay(); adminSchedule_load(AdminScheduleState.page); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
     }
   </script>
 
@@ -2016,7 +2379,8 @@
       var container = byId('admin-request-list'); clearElement(container);
       if (!requests.length) { app_empty(container, 'Tidak ada pengajuan pada filter ini.', 'clipboard-check'); return; }
       requests.forEach(function (request) {
-        var item = createElement('article', 'approval-item'); var header = createElement('div', 'approval-header'); var identity = createElement('div'); identity.appendChild(createElement('strong', '', request.user ? request.user.name : 'Karyawan')); identity.appendChild(createElement('span', '', request.type + ' | ' + app_displayDate(request.startDate) + ' - ' + app_displayDate(request.endDate))); header.appendChild(identity); header.appendChild(app_badge(request.status, request.status === 'PENDING' ? 'Menunggu' : request.status === 'APPROVED' ? 'Disetujui' : request.status === 'REJECTED' ? 'Ditolak' : 'Dibatalkan')); item.appendChild(header); item.appendChild(createElement('p', 'admin-detail', request.reason));
+        var item = createElement('article', 'approval-item'); var header = createElement('div', 'approval-header'); var identity = createElement('div'); identity.appendChild(createElement('strong', '', request.user ? request.user.name : 'Karyawan')); identity.appendChild(createElement('span', '', pengajuan_typeLabel(request.type) + ' | ' + app_displayDate(request.startDate) + ' - ' + app_displayDate(request.endDate))); header.appendChild(identity); header.appendChild(app_badge(request.status, request.status === 'PENDING' ? 'Menunggu' : request.status === 'APPROVED' ? 'Disetujui' : request.status === 'REJECTED' ? 'Ditolak' : 'Dibatalkan')); item.appendChild(header); item.appendChild(createElement('p', 'admin-detail', request.reason));
+        if (request.hasAttachment) { var attachment = createElement('button', 'button button-secondary button-small', 'Lihat foto lampiran'); attachment.type = 'button'; attachment.addEventListener('click', function () { app_openLeavePhoto(request.id); }); item.appendChild(attachment); }
         if (request.reviewerNote) item.appendChild(createElement('p', 'admin-detail', 'Catatan: ' + request.reviewerNote));
         if (request.status === 'PENDING') { var actions = createElement('div', 'approval-actions'); var approve = createElement('button', 'button button-primary button-small', 'Setujui'); approve.type = 'button'; approve.addEventListener('click', function () { adminRequest_review(request, 'APPROVED'); }); var reject = createElement('button', 'button button-danger button-small', 'Tolak'); reject.type = 'button'; reject.addEventListener('click', function () { adminRequest_review(request, 'REJECTED'); }); actions.appendChild(approve); actions.appendChild(reject); item.appendChild(actions); }
         container.appendChild(item);
@@ -2112,7 +2476,6 @@
   <script>
     /* PAGE: REGISTRY */
     var PAGES = {
-      'home': { title: 'Beranda', render: home_render, init: home_init },
       'login': { title: 'Login', render: login_render, init: login_init },
       'forgot-password': { title: 'Reset Password', render: forgotPassword_render, init: forgotPassword_init },
       'reset-password': { title: 'Password Baru', render: resetPassword_render, init: resetPassword_init },
