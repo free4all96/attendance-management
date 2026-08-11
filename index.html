@@ -1,0 +1,2498 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="Attendance Management - absensi karyawan dengan selfie, GPS, dan geofence.">
+  <title>Attendance Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- ============ [ GLOBAL ] ============ -->
+  <style>
+    /* GLOBAL */
+    :root {
+      color-scheme: light;
+      --color-primary: #C81D25;
+      --color-primary-dark: #A61920;
+      --color-primary-soft: #FDEBEC;
+      --color-surface: #FFFFFF;
+      --color-background: #F4F4F5;
+      --color-text: #1C1C1E;
+      --color-muted: #8E8E93;
+      --color-border: #E5E5EA;
+      --color-info-bg: #E5F0FF;
+      --color-info: #0066CC;
+      --color-success-bg: #E8F8EE;
+      --color-success: #28A745;
+      --color-warning-bg: #FFF4D6;
+      --color-warning: #9A6700;
+      --color-danger-bg: #FDEBEC;
+      --color-danger: #A61920;
+      --color-shadow: rgba(28, 28, 30, 0.08);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --focus-ring: 0 0 0 3px rgba(200, 29, 37, 0.22);
+      --transition: 180ms ease;
+      --header-height: 68px;
+      --sidebar-width: 248px;
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --color-surface: #2C2C2E;
+      --color-background: #1C1C1E;
+      --color-text: #FFFFFF;
+      --color-muted: #AEAEB2;
+      --color-border: #48484A;
+      --color-info-bg: #19324F;
+      --color-success-bg: #173A26;
+      --color-warning-bg: #4A3715;
+      --color-danger-bg: #451B1E;
+      --color-shadow: rgba(0, 0, 0, 0.24);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { min-width: 320px; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--color-background);
+      color: var(--color-text);
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.modal-open { overflow: hidden; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: 0.58; }
+    a { color: inherit; }
+    img { max-width: 100%; display: block; }
+    [hidden], .is-hidden { display: none !important; }
+    .screen-reader-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: 10px;
+      left: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--color-text);
+      color: var(--color-surface);
+      transform: translateY(-160%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+    :focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+    .public-shell { min-height: 100dvh; }
+    .public-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: var(--header-height);
+      padding: 0 20px;
+      background: var(--color-primary);
+      color: #FFFFFF;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .brand-mark {
+      display: inline-grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border: 2px solid currentColor;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .public-main { min-height: calc(100dvh - var(--header-height)); }
+
+    .app-shell { min-height: 100dvh; background: var(--color-background); }
+    .app-header {
+      position: sticky;
+      z-index: 20;
+      top: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: var(--header-height);
+      padding: 0 20px;
+      background: var(--color-primary);
+      color: #FFFFFF;
+    }
+    .app-header .brand { flex: 1; }
+    .app-menu-button, .app-header-button {
+      display: inline-grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 10px;
+      background: transparent;
+      color: #FFFFFF;
+    }
+    .app-menu-button { display: none; }
+    .app-user-chip {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      max-width: 210px;
+      margin-right: 4px;
+      overflow: hidden;
+      font-size: 12px;
+      text-align: right;
+    }
+    .app-user-chip strong, .app-user-chip span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .app-user-chip span { opacity: 0.78; }
+    .app-user-avatar {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.18);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .app-layout { display: flex; min-height: calc(100dvh - var(--header-height)); }
+    .app-sidebar {
+      position: sticky;
+      top: var(--header-height);
+      display: flex;
+      width: var(--sidebar-width);
+      height: calc(100dvh - var(--header-height));
+      flex: 0 0 var(--sidebar-width);
+      flex-direction: column;
+      padding: 20px 14px;
+      overflow-y: auto;
+      border-right: 1px solid var(--color-border);
+      background: var(--color-surface);
+    }
+    .nav-label {
+      padding: 14px 12px 8px;
+      color: var(--color-muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .app-nav { display: grid; gap: 3px; }
+    .app-nav button {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      gap: 11px;
+      min-height: 43px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--color-muted);
+      font-size: 13px;
+      font-weight: 600;
+      text-align: left;
+      transition: background var(--transition), color var(--transition);
+    }
+    .app-nav button:hover, .app-nav button.is-active { background: var(--color-primary-soft); color: var(--color-primary); }
+    .app-nav button svg { width: 18px; height: 18px; }
+    .app-main { width: 100%; min-width: 0; flex: 1; padding: 28px; }
+    .page-container { width: 100%; max-width: 1280px; margin: 0 auto; }
+    .view { display: none; }
+    .view.is-active { display: block; }
+
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+    .page-heading h1 { margin: 0; color: var(--color-text); font-size: clamp(24px, 3vw, 32px); line-height: 1.18; letter-spacing: -0.04em; }
+    .page-heading p { max-width: 600px; margin: 7px 0 0; color: var(--color-muted); font-size: 13px; }
+    .page-heading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .section-title { margin: 0 0 12px; font-size: 16px; letter-spacing: -0.02em; }
+    .eyebrow { margin: 0 0 8px; color: var(--color-primary); font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+
+    .button {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 15px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+      text-decoration: none;
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition);
+    }
+    .button:active { transform: translateY(1px); }
+    .button svg { width: 17px; height: 17px; }
+    .button-primary { background: var(--color-primary); color: #FFFFFF; }
+    .button-primary:hover { background: var(--color-primary-dark); }
+    .button-secondary { border-color: var(--color-border); background: var(--color-surface); color: var(--color-text); }
+    .button-secondary:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .button-danger { background: var(--color-danger); color: #FFFFFF; }
+    .button-ghost { background: transparent; color: var(--color-muted); }
+    .button-ghost:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+    .button-small { min-height: 34px; padding: 0 10px; border-radius: 8px; font-size: 12px; }
+    .button-block { width: 100%; }
+
+    .card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: 0 8px 20px var(--color-shadow); }
+    .card-padding { padding: 20px; }
+    .grid { display: grid; gap: 18px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .stack { display: grid; gap: 20px; }
+    .cluster { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .muted { color: var(--color-muted); }
+    .empty-state, .error-state { padding: 30px 20px; color: var(--color-muted); text-align: center; }
+    .empty-state svg, .error-state svg { width: 30px; height: 30px; margin: 0 auto 10px; }
+    .error-state { color: var(--color-danger); }
+    .skeleton { position: relative; overflow: hidden; min-height: 16px; border-radius: 6px; background: var(--color-border); }
+    .skeleton::after { position: absolute; inset: 0; content: ""; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent); animation: skeleton-shimmer 1.3s infinite; }
+    .skeleton-line { width: 70%; height: 13px; }
+    .skeleton-block { width: 100%; height: 90px; }
+    @keyframes skeleton-shimmer { to { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+    .form-grid { display: grid; gap: 16px; }
+    .form-field { display: grid; gap: 7px; }
+    .form-field label { color: var(--color-text); font-size: 12px; font-weight: 700; }
+    .form-field small { color: var(--color-muted); font-size: 11px; }
+    .input, .select, .textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      outline: none;
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-size: 14px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .textarea { min-height: 100px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--color-primary); box-shadow: var(--focus-ring); }
+    .input[aria-invalid="true"], .select[aria-invalid="true"], .textarea[aria-invalid="true"] { border-color: var(--color-danger); }
+    .field-error { min-height: 16px; color: var(--color-danger); font-size: 11px; }
+    .password-wrap { position: relative; }
+    .password-wrap .input { padding-right: 46px; }
+    .password-toggle { position: absolute; top: 2px; right: 2px; display: grid; width: 40px; height: 40px; place-items: center; border: 0; background: transparent; color: var(--color-muted); }
+    .password-toggle svg { width: 17px; height: 17px; }
+
+    .status-badge { display: inline-flex; min-height: 26px; align-items: center; gap: 5px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .status-badge svg { width: 13px; height: 13px; }
+    .status-success { background: var(--color-success-bg); color: var(--color-success); }
+    .status-info { background: var(--color-info-bg); color: var(--color-info); }
+    .status-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+    .status-danger { background: var(--color-danger-bg); color: var(--color-danger); }
+    .status-neutral { background: #F2F2F7; color: #636366; }
+    [data-theme="dark"] .status-neutral { background: #3A3A3C; color: #D1D1D6; }
+
+    .table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .data-table { width: 100%; min-width: 940px; border-collapse: collapse; font-size: 12px; }
+    .data-table th { padding: 12px 13px; border-bottom: 1px solid var(--color-border); background: var(--color-background); color: var(--color-muted); font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+    .data-table td { padding: 13px; border-bottom: 1px solid var(--color-border); vertical-align: middle; white-space: nowrap; }
+    .data-table tr:last-child td { border-bottom: 0; }
+    .data-table tbody tr:hover { background: rgba(200, 29, 37, 0.025); }
+    .table-empty { padding: 20px; color: var(--color-muted); text-align: center; }
+    .photo-thumb { display: grid; width: 38px; height: 38px; place-items: center; overflow: hidden; padding: 0; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-background); color: var(--color-primary); }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-thumb svg { width: 17px; height: 17px; }
+    .pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 14px; }
+    .pagination-info { color: var(--color-muted); font-size: 12px; }
+    .pagination-actions { display: flex; gap: 6px; }
+
+    .toast-region { position: fixed; z-index: 80; right: 16px; bottom: 16px; display: grid; width: min(360px, calc(100vw - 32px)); gap: 9px; }
+    .toast { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary); border-radius: 12px; background: var(--color-surface); box-shadow: 0 12px 30px var(--color-shadow); font-size: 12px; }
+    .toast svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--color-primary); }
+    .toast strong { display: block; margin-bottom: 2px; font-size: 12px; }
+    .toast-success { border-left-color: var(--color-success); }
+    .toast-success svg { color: var(--color-success); }
+    .toast-error { border-left-color: var(--color-danger); }
+    .toast-error svg { color: var(--color-danger); }
+    .toast-info { border-left-color: var(--color-info); }
+    .toast-info svg { color: var(--color-info); }
+
+    .modal-root { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 16px; }
+    .modal-backdrop { position: absolute; inset: 0; background: rgba(28, 28, 30, 0.64); }
+    .modal-card { position: relative; width: min(560px, 100%); max-height: min(720px, calc(100dvh - 32px)); overflow-y: auto; border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: 0 22px 60px rgba(0,0,0,0.24); }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 20px 12px; }
+    .modal-header h2 { margin: 0; font-size: 19px; letter-spacing: -0.03em; }
+    .modal-close { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 9px; background: var(--color-background); color: var(--color-muted); }
+    .modal-body { padding: 0 20px 20px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px 20px; }
+    .photo-modal-card { width: min(760px, 100%); background: #1C1C1E; }
+    .photo-modal-card .modal-header { color: #FFFFFF; }
+    .photo-modal-card .modal-close { background: rgba(255,255,255,0.12); color: #FFFFFF; }
+    .photo-modal-body { display: grid; min-height: 260px; place-items: center; padding: 0 20px 20px; }
+    .photo-modal-body img { max-height: calc(100dvh - 150px); border-radius: 12px; object-fit: contain; }
+    .global-loading { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; background: rgba(244, 244, 245, 0.7); }
+    [data-theme="dark"] .global-loading { background: rgba(28, 28, 30, 0.7); }
+    .loading-card { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); box-shadow: 0 10px 30px var(--color-shadow); font-size: 13px; font-weight: 700; }
+    .loading-spinner { width: 18px; height: 18px; border: 2px solid var(--color-primary-soft); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 1023px) {
+      .app-menu-button { display: inline-grid; }
+      .app-sidebar { position: fixed; z-index: 30; top: var(--header-height); left: 0; transform: translateX(-105%); transition: transform var(--transition); box-shadow: 12px 0 30px var(--color-shadow); }
+      .app-sidebar.is-open { transform: translateX(0); }
+      .app-main { padding: 24px 20px; }
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 767px) {
+      .app-header, .public-header { padding: 0 14px; }
+      .app-user-chip { display: none; }
+      .app-main { padding: 20px 14px 88px; }
+      .page-heading { display: block; margin-bottom: 18px; }
+      .page-heading-actions { margin-top: 14px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .card-padding { padding: 16px; }
+      .button { min-height: 44px; }
+      .pagination { align-items: flex-start; flex-direction: column; }
+    }
+    @media (max-width: 479px) {
+      .brand { font-size: 13px; }
+      .brand-mark { width: 25px; height: 25px; }
+      .page-heading h1 { font-size: 25px; }
+    }
+  </style>
+
+  <!-- ============ [ PAGE: PUBLIC ] ============ -->
+  <style>
+    /* PAGE: PUBLIC */
+    .public-hero { display: grid; min-height: calc(100dvh - var(--header-height)); align-items: center; padding: 48px 20px; }
+    .public-hero-inner { display: grid; width: min(1080px, 100%); grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr); gap: 48px; align-items: center; margin: 0 auto; }
+    .public-hero h1 { max-width: 680px; margin: 0; color: var(--color-text); font-size: clamp(38px, 7vw, 76px); line-height: 1.02; letter-spacing: -0.065em; }
+    .public-hero p { max-width: 520px; margin: 20px 0 0; color: var(--color-muted); font-size: 17px; }
+    .public-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .public-hero-panel { padding: 28px; border: 1px solid var(--color-border); border-radius: 24px; background: var(--color-surface); box-shadow: 0 16px 40px var(--color-shadow); }
+    .public-hero-panel-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid var(--color-border); }
+    .public-hero-panel h2 { margin: 0; font-size: 15px; }
+    .public-red-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); box-shadow: 0 0 0 5px var(--color-primary-soft); }
+    .public-hero-metric { padding: 26px 0 12px; }
+    .public-hero-metric strong { display: block; font-size: 40px; line-height: 1; letter-spacing: -0.06em; }
+    .public-hero-metric span { display: block; margin-top: 8px; color: var(--color-muted); font-size: 12px; }
+    .public-hero-lines { display: grid; gap: 9px; margin-top: 15px; }
+    .public-hero-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--color-muted); font-size: 12px; }
+    @media (max-width: 767px) { .public-hero { padding: 36px 14px; } .public-hero-inner { grid-template-columns: 1fr; gap: 30px; } .public-hero h1 { font-size: 48px; } }
+  </style>
+
+  <!-- ============ [ PAGE: LOGIN ] ============ -->
+  <style>
+    /* PAGE: LOGIN */
+    .auth-view { display: grid; min-height: calc(100dvh - var(--header-height)); place-items: center; padding: 30px 16px; }
+    .auth-card { width: min(440px, 100%); padding: 30px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); box-shadow: 0 18px 42px var(--color-shadow); }
+    .auth-card h1 { margin: 0; font-size: 28px; letter-spacing: -0.05em; }
+    .auth-card > p { margin: 9px 0 24px; color: var(--color-muted); font-size: 13px; }
+    .auth-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; color: var(--color-muted); font-size: 12px; }
+    .auth-footer a { color: var(--color-primary); font-weight: 700; text-decoration: none; }
+    @media (max-width: 479px) { .auth-card { padding: 22px 18px; } }
+  </style>
+
+  <!-- ============ [ PAGE: DASHBOARD ] ============ -->
+  <style>
+    /* PAGE: DASHBOARD */
+    .dashboard-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric-card { padding: 17px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); }
+    .metric-card span { display: block; color: var(--color-muted); font-size: 11px; font-weight: 700; }
+    .metric-card strong { display: block; margin-top: 7px; font-size: 26px; line-height: 1.1; letter-spacing: -0.05em; }
+    .metric-card small { display: block; margin-top: 5px; color: var(--color-muted); font-size: 10px; }
+    .dashboard-today { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr); gap: 18px; }
+    .today-card { padding: 22px; border-radius: var(--radius-lg); background: var(--color-primary); color: #FFFFFF; }
+    .today-card .eyebrow { color: rgba(255,255,255,0.72); }
+    .today-card h2 { margin: 0; font-size: 24px; letter-spacing: -0.04em; }
+    .today-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 17px; }
+    .today-meta span { padding: 7px 9px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(255,255,255,0.11); font-size: 11px; }
+    .today-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .today-actions .button-primary { background: #FFFFFF; color: var(--color-primary); }
+    .today-actions .button-secondary { border-color: rgba(255,255,255,0.35); background: transparent; color: #FFFFFF; }
+    .dashboard-quick { display: grid; gap: 10px; }
+    .quick-link { display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+    .quick-link-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 10px; background: var(--color-primary-soft); color: var(--color-primary); }
+    .quick-link strong { display: block; font-size: 13px; }
+    .quick-link span { display: block; margin-top: 2px; color: var(--color-muted); font-size: 11px; }
+    .dashboard-request-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+    .dashboard-request-row:last-child { border-bottom: 0; }
+    .dashboard-request-row strong { display: block; font-size: 12px; }
+    .dashboard-request-row span { display: block; margin-top: 3px; color: var(--color-muted); font-size: 11px; }
+    @media (max-width: 1023px) { .dashboard-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-today { grid-template-columns: 1fr; } }
+    @media (max-width: 479px) { .dashboard-summary-grid { grid-template-columns: 1fr 1fr; } .metric-card strong { font-size: 22px; } }
+  </style>
+
+  <!-- ============ [ PAGE: ABSENSI ] ============ -->
+  <style>
+    /* PAGE: ABSENSI */
+    .attendance-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr); gap: 18px; }
+    .camera-card { overflow: hidden; }
+    .camera-frame { position: relative; display: grid; min-height: 310px; place-items: center; overflow: hidden; background: #1C1C1E; }
+    .camera-frame video, .camera-frame img { width: 100%; height: 100%; min-height: 310px; object-fit: cover; }
+    .camera-frame video { transform: scaleX(-1); }
+    .camera-placeholder { display: grid; place-items: center; gap: 10px; padding: 30px; color: #AEAEB2; text-align: center; }
+    .camera-placeholder svg { width: 38px; height: 38px; color: var(--color-primary); }
+    .camera-guide { position: absolute; inset: 15% 20%; border: 2px solid rgba(255,255,255,0.78); border-radius: 42% 42% 38% 38%; pointer-events: none; }
+    .camera-card-body { padding: 18px; }
+    .camera-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .gps-panel { display: grid; gap: 13px; }
+    .gps-status { display: flex; align-items: flex-start; gap: 10px; padding: 13px; border-radius: 12px; background: var(--color-background); }
+    .gps-status svg { width: 19px; height: 19px; flex: 0 0 auto; color: var(--color-primary); }
+    .gps-status strong { display: block; font-size: 12px; }
+    .gps-status span { display: block; margin-top: 2px; color: var(--color-muted); font-size: 11px; }
+    .attendance-context { display: grid; gap: 11px; padding: 16px; border: 1px solid var(--color-border); border-radius: 14px; }
+    .attendance-context-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; font-size: 12px; }
+    .attendance-context-row span { color: var(--color-muted); }
+    .attendance-context-row strong { text-align: right; }
+    .camera-help { margin: 13px 0 0; color: var(--color-muted); font-size: 11px; }
+    @media (max-width: 1023px) { .attendance-layout { grid-template-columns: 1fr; } }
+  </style>
+
+  <!-- ============ [ PAGE: PENGAJUAN ] ============ -->
+  <style>
+    /* PAGE: PENGAJUAN */
+    .request-layout { display: grid; grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr); gap: 18px; }
+    .request-list { display: grid; gap: 10px; }
+    .request-item { padding: 15px; border: 1px solid var(--color-border); border-radius: 13px; background: var(--color-surface); }
+    .request-item-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .request-item strong { font-size: 13px; }
+    .request-item p { margin: 8px 0 0; color: var(--color-muted); font-size: 12px; }
+    .request-item-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; color: var(--color-muted); font-size: 11px; }
+    @media (max-width: 1023px) { .request-layout { grid-template-columns: 1fr; } }
+  </style>
+
+  <!-- ============ [ PAGE: REKAP ] ============ -->
+  <style>
+    /* PAGE: REKAP */
+    .recap-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 16px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); }
+    .recap-toolbar .form-field { min-width: 160px; flex: 1; }
+    .recap-summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .recap-summary-card { padding: 14px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); }
+    .recap-summary-card span { display: block; color: var(--color-muted); font-size: 10px; font-weight: 700; }
+    .recap-summary-card strong { display: block; margin-top: 5px; font-size: 22px; letter-spacing: -0.05em; }
+    @media (max-width: 1023px) { .recap-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 479px) { .recap-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  </style>
+
+  <!-- ============ [ PAGE: PROFIL ] ============ -->
+  <style>
+    /* PAGE: PROFIL */
+    .profile-header { display: flex; align-items: center; gap: 15px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border); }
+    .profile-avatar { display: grid; width: 66px; height: 66px; place-items: center; border-radius: 20px; background: var(--color-primary); color: #FFFFFF; font-size: 22px; font-weight: 800; }
+    .profile-header h2 { margin: 0; font-size: 21px; letter-spacing: -0.04em; }
+    .profile-header p { margin: 4px 0 0; color: var(--color-muted); font-size: 12px; }
+    .profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-top: 20px; }
+    .profile-field span { display: block; color: var(--color-muted); font-size: 11px; }
+    .profile-field strong { display: block; margin-top: 4px; font-size: 13px; }
+    @media (max-width: 600px) { .profile-fields { grid-template-columns: 1fr; } }
+  </style>
+
+  <!-- ============ [ PAGE: ADMIN ] ============ -->
+  <style>
+    /* PAGE: ADMIN-KARYAWAN, ADMIN-LOKASI, ADMIN-SHIFT, ADMIN-JADWAL, ADMIN-PENGAJUAN, ADMIN-KOREKSI, ADMIN-PENGATURAN */
+    .admin-layout { display: grid; grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr); gap: 18px; }
+    .admin-form-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .admin-list-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .admin-list-toolbar .input { min-width: 190px; flex: 1; }
+    .admin-table-card { min-width: 0; }
+    .admin-table-card .table-wrap { max-height: 620px; }
+    .admin-action-group { display: flex; flex-wrap: wrap; gap: 5px; }
+    .admin-detail { color: var(--color-muted); font-size: 11px; }
+    .approval-item { display: grid; gap: 8px; padding: 15px 0; border-bottom: 1px solid var(--color-border); }
+    .approval-item:last-child { border-bottom: 0; }
+    .approval-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .approval-header strong { font-size: 13px; }
+    .approval-header span { color: var(--color-muted); font-size: 11px; }
+    .approval-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+    @media (max-width: 1023px) { .admin-layout { grid-template-columns: 1fr; } }
+  </style>
+  <style>
+    .mobile-bottom-nav { display: none; }
+    .location-map { height: 280px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-background); }
+    .location-map .leaflet-control-attribution { font-size: 9px; }
+    .location-map-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .schedule-day-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .schedule-roster { display: grid; gap: 8px; max-height: 560px; overflow-y: auto; padding: 2px; }
+    .schedule-roster-row { display: grid; grid-template-columns: 24px minmax(150px, 1fr) 110px minmax(130px, 1fr) minmax(130px, 1fr); gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-background); }
+    .schedule-roster-row.is-off { opacity: 0.68; }
+    .schedule-roster-row .input, .schedule-roster-row .select { min-height: 38px; padding: 8px 9px; font-size: 12px; }
+    .schedule-roster-identity strong { display: block; font-size: 12px; }
+    .schedule-roster-identity span { display: block; margin-top: 2px; color: var(--color-muted); font-size: 10px; }
+    .schedule-ai-box { display: grid; gap: 10px; padding: 13px; border: 1px solid rgba(200, 29, 37, 0.22); border-radius: 14px; background: var(--color-primary-soft); }
+    .schedule-ai-box p { margin: 0; color: var(--color-muted); font-size: 11px; }
+    .schedule-ai-status { min-height: 17px; color: var(--color-muted); font-size: 11px; }
+    .schedule-ai-constraints { display: grid; gap: 10px; padding: 11px; border: 1px solid var(--color-border); border-radius: 11px; background: var(--color-surface); }
+    .schedule-ai-constraints-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .schedule-ai-shifts { display: flex; flex-wrap: wrap; gap: 7px; }
+    .schedule-ai-shift-option { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-muted); font-size: 11px; }
+    .schedule-ai-draft-actions { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 4px; }
+    .request-photo-preview { width: 100%; max-height: 220px; border: 1px solid var(--color-border); border-radius: 12px; object-fit: cover; }
+    @media (max-width: 767px) {
+      .mobile-bottom-nav { position: fixed; z-index: 35; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5, 1fr); padding: 7px max(7px, env(safe-area-inset-left)) max(7px, env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); box-shadow: 0 -8px 24px var(--color-shadow); backdrop-filter: blur(14px); }
+      @supports (background: color-mix(in srgb, white, black)) { .mobile-bottom-nav { background: color-mix(in srgb, var(--color-surface) 94%, transparent); } }
+      .mobile-bottom-nav button { display: grid; min-width: 0; min-height: 48px; place-items: center; gap: 3px; padding: 4px 2px; border: 0; border-radius: 10px; background: transparent; color: var(--color-muted); font-size: 9px; font-weight: 700; }
+      .mobile-bottom-nav button.is-active { background: var(--color-primary-soft); color: var(--color-primary); }
+      .mobile-bottom-nav svg { width: 18px; height: 18px; }
+      .app-main { padding-bottom: 92px; }
+      .page-heading h1 { text-wrap: balance; }
+      .attendance-layout, .request-layout, .admin-layout { gap: 14px; }
+      .camera-frame, .camera-frame video, .camera-frame img { min-height: 270px; }
+      .location-map { height: 230px; }
+      .schedule-day-toolbar { grid-template-columns: 1fr; }
+      .schedule-ai-constraints-grid { grid-template-columns: 1fr; }
+      .schedule-roster { max-height: none; overflow: visible; }
+      .schedule-roster-row { grid-template-columns: 24px minmax(0, 1fr) 96px; }
+      .schedule-roster-row > .schedule-roster-shift, .schedule-roster-row > .schedule-roster-location, .schedule-roster-row > .schedule-roster-notes { grid-column: 2 / -1; }
+      .schedule-roster-row .select, .schedule-roster-row .input { width: 100%; }
+      .table-wrap { border-radius: 12px; }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#app-main">Lewati ke konten utama</a>
+
+  <div id="public-shell" class="public-shell">
+    <header class="public-header">
+      <a class="brand" href="#/login">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span>Attendance Management</span>
+      </a>
+      <a class="button button-secondary" href="#/login">Masuk</a>
+    </header>
+    <main id="public-main" class="public-main">
+      <!-- ============ [ PAGE: HOME ] ============ -->
+      <section id="view-home" class="view" data-view="home">
+        <div class="public-hero">
+          <div class="public-hero-inner">
+            <div>
+              <p class="eyebrow">Workforce attendance</p>
+              <h1>Kehadiran yang tercatat dengan bukti.</h1>
+              <p>Absensi karyawan dengan selfie, GPS, dan geofence yang terhubung langsung dengan rekap kerja.</p>
+              <div class="public-hero-actions">
+                <a class="button button-primary" href="#/login"><i data-lucide="arrow-right"></i>Masuk ke aplikasi</a>
+                <a class="button button-secondary" href="#/login">Lihat rekap</a>
+              </div>
+            </div>
+            <div class="public-hero-panel" aria-label="Ringkasan fitur aplikasi">
+              <div class="public-hero-panel-top"><h2>Status operasional</h2><span class="public-red-dot" aria-hidden="true"></span></div>
+              <div class="public-hero-metric"><strong>GPS + Selfie</strong><span>Setiap kehadiran memiliki konteks lokasi dan waktu.</span></div>
+              <div class="public-hero-lines">
+                <div class="public-hero-line"><span>Geofence</span><strong class="status-badge status-success">Aktif</strong></div>
+                <div class="public-hero-line"><span>Rekap bulanan</span><strong class="status-badge status-info">Tersedia</strong></div>
+                <div class="public-hero-line"><span>Shift malam</span><strong>20:00 - 03:00</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ [ PAGE: LOGIN ] ============ -->
+      <section id="view-login" class="view" data-view="login">
+        <div class="auth-view">
+          <div class="auth-card">
+            <p class="eyebrow">Secure access</p>
+            <h1>Masuk ke akun Anda</h1>
+            <p>Gunakan email dan password yang diberikan oleh Admin.</p>
+            <form id="login-form" class="form-grid" novalidate>
+              <div class="form-field">
+                <label for="login-email">Email</label>
+                <input id="login-email" class="input" type="email" autocomplete="username" inputmode="email" required>
+                <span id="login-email-error" class="field-error" aria-live="polite"></span>
+              </div>
+              <div class="form-field">
+                <label for="login-password">Password</label>
+                <div class="password-wrap">
+                  <input id="login-password" class="input" type="password" autocomplete="current-password" required>
+                  <button id="login-password-toggle" class="password-toggle" type="button" aria-label="Tampilkan password"><i data-lucide="eye"></i></button>
+                </div>
+                <span id="login-password-error" class="field-error" aria-live="polite"></span>
+              </div>
+              <button id="login-submit" class="button button-primary button-block" type="submit"><i data-lucide="log-in"></i>Masuk</button>
+            </form>
+            <div class="auth-footer"><span>Attendance Management</span><a href="#/forgot-password">Lupa password?</a></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ [ PAGE: FORGOT-PASSWORD ] ============ -->
+      <section id="view-forgot-password" class="view" data-view="forgot-password">
+        <div class="auth-view">
+          <div class="auth-card">
+            <p class="eyebrow">Account recovery</p>
+            <h1>Reset password</h1>
+            <p>Masukkan email akun. Jika terdaftar, instruksi reset akan dikirim.</p>
+            <form id="forgot-password-form" class="form-grid" novalidate>
+              <div class="form-field"><label for="forgot-password-email">Email</label><input id="forgot-password-email" class="input" type="email" autocomplete="email" required><span id="forgot-password-email-error" class="field-error"></span></div>
+              <button id="forgot-password-submit" class="button button-primary button-block" type="submit"><i data-lucide="send"></i>Kirim instruksi</button>
+            </form>
+            <div class="auth-footer"><span></span><a href="#/login">Kembali ke login</a></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ [ PAGE: RESET-PASSWORD ] ============ -->
+      <section id="view-reset-password" class="view" data-view="reset-password">
+        <div class="auth-view">
+          <div class="auth-card">
+            <p class="eyebrow">New credentials</p>
+            <h1>Buat password baru</h1>
+            <p>Password minimal 8 karakter dan hanya berlaku setelah disimpan.</p>
+            <form id="reset-password-form" class="form-grid" novalidate>
+              <div class="form-field"><label for="reset-password-new">Password baru</label><input id="reset-password-new" class="input" type="password" autocomplete="new-password" required><span id="reset-password-new-error" class="field-error"></span></div>
+              <div class="form-field"><label for="reset-password-confirm">Ulangi password</label><input id="reset-password-confirm" class="input" type="password" autocomplete="new-password" required><span id="reset-password-confirm-error" class="field-error"></span></div>
+              <button id="reset-password-submit" class="button button-primary button-block" type="submit"><i data-lucide="key-round"></i>Simpan password</button>
+            </form>
+            <div class="auth-footer"><span></span><a href="#/login">Kembali ke login</a></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ [ PAGE: 404 ] ============ -->
+      <section id="view-404" class="view" data-view="404">
+        <div class="auth-view"><div class="auth-card" style="text-align:center"><i data-lucide="map-off" style="width:38px;height:38px;color:var(--color-primary)"></i><h1>Halaman tidak ditemukan</h1><p>Route yang Anda buka tidak tersedia.</p><a class="button button-primary" href="#/login">Kembali ke login</a></div></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="protected-shell" class="app-shell is-hidden">
+    <header class="app-header">
+      <button id="app-menu-button" class="app-menu-button" type="button" aria-label="Buka navigasi"><i data-lucide="menu"></i></button>
+      <a class="brand" href="#/dashboard"><span class="brand-mark" aria-hidden="true">A</span><span>Attendance Management</span></a>
+      <div id="app-user-chip" class="app-user-chip"><div id="app-user-avatar" class="app-user-avatar">A</div><div><strong id="app-user-name">-</strong><span id="app-user-role">-</span></div></div>
+      <button id="app-theme-toggle" class="app-header-button" type="button" aria-label="Ubah tema"><i data-lucide="sun-moon"></i></button>
+      <button id="app-logout" class="app-header-button" type="button" aria-label="Keluar"><i data-lucide="log-out"></i></button>
+    </header>
+    <div class="app-layout">
+      <aside id="app-sidebar" class="app-sidebar" aria-label="Navigasi utama">
+        <div class="nav-label">Workspace</div>
+        <nav class="app-nav">
+          <button type="button" data-route="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
+          <button type="button" data-route="absensi"><i data-lucide="scan-face"></i><span>Absensi</span></button>
+          <button type="button" data-route="pengajuan"><i data-lucide="file-pen-line"></i><span>Pengajuan</span></button>
+          <button type="button" data-route="rekap"><i data-lucide="table-2"></i><span>Rekap</span></button>
+          <button type="button" data-route="profil"><i data-lucide="user-round"></i><span>Profil</span></button>
+        </nav>
+        <div id="app-admin-nav" class="is-hidden">
+          <div class="nav-label">Admin workspace</div>
+          <nav class="app-nav">
+            <button type="button" data-route="admin/karyawan"><i data-lucide="users"></i><span>Karyawan</span></button>
+            <button type="button" data-route="admin/lokasi"><i data-lucide="map-pin"></i><span>Lokasi</span></button>
+            <button type="button" data-route="admin/shift"><i data-lucide="clock-3"></i><span>Shift</span></button>
+            <button type="button" data-route="admin/jadwal"><i data-lucide="calendar-days"></i><span>Jadwal</span></button>
+            <button type="button" data-route="admin/pengajuan"><i data-lucide="clipboard-check"></i><span>Approval</span></button>
+            <button type="button" data-route="admin/koreksi"><i data-lucide="square-pen"></i><span>Koreksi</span></button>
+            <button type="button" data-route="admin/pengaturan"><i data-lucide="settings-2"></i><span>Pengaturan</span></button>
+          </nav>
+        </div>
+      </aside>
+
+      <main id="app-main" class="app-main">
+        <!-- ============ [ PAGE: DASHBOARD ] ============ -->
+        <section id="view-dashboard" class="view" data-view="dashboard">
+          <div class="page-container stack">
+            <div class="page-heading"><div><p class="eyebrow">Overview</p><h1 id="dashboard-title">Selamat datang</h1><p id="dashboard-subtitle">Ringkasan aktivitas kehadiran Anda.</p></div><div class="page-heading-actions"><a class="button button-primary" href="#/absensi"><i data-lucide="scan-face"></i>Absen sekarang</a></div></div>
+            <div id="dashboard-summary-grid" class="dashboard-summary-grid"></div>
+            <div class="dashboard-today">
+              <div id="dashboard-today-card" class="today-card"></div>
+              <div class="dashboard-quick">
+                <a class="quick-link" href="#/pengajuan"><span class="quick-link-icon"><i data-lucide="file-plus-2"></i></span><span><strong>Ajukan izin</strong><span>Kelola izin, sakit, cuti, atau dinas</span></span><i data-lucide="chevron-right" style="margin-left:auto"></i></a>
+                <a class="quick-link" href="#/rekap"><span class="quick-link-icon"><i data-lucide="calendar-range"></i></span><span><strong>Lihat rekap</strong><span>Periksa status dan keterlambatan bulanan</span></span><i data-lucide="chevron-right" style="margin-left:auto"></i></a>
+              </div>
+            </div>
+            <div class="card card-padding"><div class="cluster" style="justify-content:space-between"><h2 class="section-title">Pengajuan terbaru</h2><a class="button button-ghost button-small" href="#/pengajuan">Lihat semua</a></div><div id="dashboard-recent-requests"></div></div>
+          </div>
+        </section>
+
+        <!-- ============ [ PAGE: ABSENSI ] ============ -->
+        <section id="view-absensi" class="view" data-view="absensi">
+          <div class="page-container stack">
+            <div class="page-heading"><div><p class="eyebrow">Attendance capture</p><h1>Absensi hari ini</h1><p>Ambil selfie dan pastikan posisi Anda berada dalam area kerja.</p></div></div>
+            <div class="attendance-layout">
+              <div class="card camera-card">
+                <div id="absensi-camera-frame" class="camera-frame"><div id="absensi-camera-placeholder" class="camera-placeholder"><i data-lucide="camera"></i><span>Kamera belum diaktifkan</span></div><video id="absensi-video" autoplay playsinline muted class="is-hidden"></video><img id="absensi-photo-preview" class="is-hidden" alt="Preview selfie absensi"><canvas id="absensi-canvas" class="is-hidden"></canvas><div class="camera-guide is-hidden" id="absensi-camera-guide" aria-hidden="true"></div></div>
+                <div class="camera-card-body"><div class="cluster"><button id="absensi-start-camera" class="button button-secondary" type="button"><i data-lucide="camera"></i>Buka kamera</button><button id="absensi-capture" class="button button-primary is-hidden" type="button"><i data-lucide="circle-dot"></i>Ambil selfie</button><button id="absensi-clear-photo" class="button button-ghost is-hidden" type="button">Ulangi</button></div><p id="absensi-camera-help" class="camera-help">Kamera hanya digunakan saat Anda mengambil bukti absensi.</p></div>
+              </div>
+              <div class="stack">
+                <div class="card card-padding"><h2 class="section-title">Konteks shift</h2><div id="absensi-context" class="attendance-context"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div></div>
+                <div class="card card-padding"><h2 class="section-title">Validasi lokasi</h2><div class="gps-panel"><div id="absensi-gps-status" class="gps-status"><i data-lucide="map-pin"></i><div><strong>Lokasi belum dibaca</strong><span>Tekan tombol untuk mendapatkan lokasi GPS.</span></div></div><button id="absensi-get-location" class="button button-secondary button-block" type="button"><i data-lucide="locate-fixed"></i>Deteksi lokasi</button><div id="absensi-location-details" class="admin-detail"></div></div></div>
+                <div class="card card-padding"><h2 class="section-title">Tindakan</h2><div class="cluster"><button id="absensi-check-in" class="button button-primary" type="button" disabled><i data-lucide="log-in"></i>Datang</button><button id="absensi-check-out" class="button button-secondary" type="button" disabled><i data-lucide="log-out"></i>Pulang</button></div><p id="absensi-action-note" class="camera-help">Validasi kamera dan GPS diperlukan.</p></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ [ PAGE: PENGAJUAN ] ============ -->
+        <section id="view-pengajuan" class="view" data-view="pengajuan">
+          <div class="page-container stack">
+            <div class="page-heading"><div><p class="eyebrow">Time off</p><h1>Pengajuan</h1><p>Ajukan izin, sakit, cuti, atau dinas untuk tanggal yang diperlukan.</p></div></div>
+            <div class="request-layout">
+              <div class="card card-padding"><h2 class="section-title">Pengajuan baru</h2><form id="request-form" class="form-grid" novalidate><div class="form-field"><label for="request-type">Jenis</label><select id="request-type" class="select"><option value="IZIN">Izin</option><option value="SAKIT">Sakit</option><option value="CUTI">Cuti</option><option value="DINAS">Dinas</option></select></div><div class="grid grid-2"><div class="form-field"><label for="request-start-date">Tanggal mulai</label><input id="request-start-date" class="input" type="date" required></div><div class="form-field"><label for="request-end-date">Tanggal selesai</label><input id="request-end-date" class="input" type="date" required></div></div><div class="form-field"><label for="request-reason">Keterangan</label><textarea id="request-reason" class="textarea" maxlength="1000" required></textarea><small>Jelaskan alasan pengajuan secara singkat.</small></div><button id="request-submit" class="button button-primary button-block" type="submit"><i data-lucide="send"></i>Kirim pengajuan</button></form></div>
+              <div class="card card-padding"><div class="cluster" style="justify-content:space-between"><h2 class="section-title">Riwayat pengajuan</h2><button id="request-refresh" class="button button-ghost button-small" type="button"><i data-lucide="refresh-cw"></i>Refresh</button></div><div id="request-list" class="request-list"></div><div id="request-pagination"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ [ PAGE: REKAP ] ============ -->
+        <section id="view-rekap" class="view" data-view="rekap">
+          <div class="page-container stack">
+            <div class="page-heading"><div><p class="eyebrow">Monthly record</p><h1>Rekap kehadiran</h1><p>Periksa status harian, foto selfie, dan total keterlambatan.</p></div><div class="page-heading-actions"><button id="rekap-export" class="button button-secondary is-hidden" type="button"><i data-lucide="download"></i>Export CSV</button></div></div>
+            <div class="recap-toolbar"><div class="form-field"><label for="rekap-month">Bulan</label><input id="rekap-month" class="input" type="month"></div><div id="rekap-user-field" class="form-field is-hidden"><label for="rekap-user">Karyawan</label><select id="rekap-user" class="select"></select></div><div class="form-field"><label for="rekap-search">Cari</label><input id="rekap-search" class="input" type="search" placeholder="Status, shift, keterangan" autocomplete="off"></div><button id="rekap-refresh" class="button button-primary" type="button"><i data-lucide="refresh-cw"></i>Tampilkan</button></div>
+            <div id="rekap-summary-grid" class="recap-summary-grid"></div>
+            <div class="card card-padding"><div id="rekap-table-state"></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Tanggal</th><th>Shift</th><th>Jam masuk</th><th>Foto masuk</th><th>Datang</th><th>Jam pulang</th><th>Foto pulang</th><th>Pulang</th><th>Status</th><th>Keterangan</th></tr></thead><tbody id="rekap-table-body"></tbody></table></div><div id="rekap-pagination"></div></div>
+          </div>
+        </section>
+
+        <!-- ============ [ PAGE: PROFIL ] ============ -->
+        <section id="view-profil" class="view" data-view="profil">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">Account</p><h1>Profil</h1><p>Informasi akun yang sedang digunakan.</p></div></div><div class="card card-padding"><div class="profile-header"><div id="profile-avatar" class="profile-avatar">A</div><div><h2 id="profile-name">-</h2><p id="profile-role">-</p></div></div><div id="profile-fields" class="profile-fields"></div><div style="margin-top:22px"><button id="profile-logout" class="button button-danger" type="button"><i data-lucide="log-out"></i>Keluar dari akun</button></div></div></div>
+        </section>
+
+        <!-- ============ [ PAGE: ADMIN-KARYAWAN ] ============ -->
+        <section id="view-admin-karyawan" class="view" data-view="admin/karyawan">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">Admin workspace</p><h1>Master karyawan</h1><p>Kelola akun, role, dan status karyawan.</p></div></div><div class="admin-layout"><div class="card card-padding"><h2 class="section-title">Karyawan baru</h2><form id="admin-user-form" class="form-grid"><input id="admin-user-id" type="hidden"><div class="form-field"><label for="admin-user-code">Kode karyawan</label><input id="admin-user-code" class="input" required></div><div class="form-field"><label for="admin-user-name">Nama</label><input id="admin-user-name" class="input" required></div><div class="form-field"><label for="admin-user-email">Email</label><input id="admin-user-email" class="input" type="email" required></div><div class="grid grid-2"><div class="form-field"><label for="admin-user-role">Role</label><select id="admin-user-role" class="select"><option value="EMPLOYEE">Karyawan</option><option value="HR_MANAGER">HR/Manager</option><option value="ADMIN">Admin</option></select></div><div class="form-field"><label for="admin-user-join-date">Tanggal masuk</label><input id="admin-user-join-date" class="input" type="date"></div></div><div class="form-field"><label for="admin-user-password">Password awal</label><input id="admin-user-password" class="input" type="password" minlength="8" required></div><div class="form-field"><label for="admin-user-department">Departemen</label><input id="admin-user-department" class="input"></div><div class="admin-form-actions"><button id="admin-user-submit" class="button button-primary" type="submit">Simpan karyawan</button><button id="admin-user-reset" class="button button-ghost" type="button">Reset</button></div></form></div><div class="card card-padding admin-table-card"><div class="admin-list-toolbar"><input id="admin-user-search" class="input" type="search" placeholder="Cari nama atau email"><button id="admin-user-refresh" class="button button-secondary button-small" type="button"><i data-lucide="refresh-cw"></i>Refresh</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Karyawan</th><th>Email</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="admin-user-body"></tbody></table></div><div id="admin-user-pagination"></div></div></div></div>
+        </section>
+
+        <!-- ============ [ PAGE: ADMIN-LOKASI ] ============ -->
+        <section id="view-admin-lokasi" class="view" data-view="admin/lokasi">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">Admin workspace</p><h1>Lokasi geofence</h1><p>Atur koordinat dan radius area absensi.</p></div></div><div class="admin-layout"><div class="card card-padding"><h2 class="section-title">Lokasi baru</h2><form id="admin-location-form" class="form-grid"><input id="admin-location-id" type="hidden"><div class="form-field"><label for="admin-location-name">Nama lokasi</label><input id="admin-location-name" class="input" required></div><div class="form-field"><label for="admin-location-address">Alamat</label><input id="admin-location-address" class="input"></div><div class="grid grid-2"><div class="form-field"><label for="admin-location-latitude">Latitude</label><input id="admin-location-latitude" class="input" type="number" step="any" required></div><div class="form-field"><label for="admin-location-longitude">Longitude</label><input id="admin-location-longitude" class="input" type="number" step="any" required></div></div><div class="grid grid-2"><div class="form-field"><label for="admin-location-radius">Radius (meter)</label><input id="admin-location-radius" class="input" type="number" min="1" value="100" required></div><div class="form-field"><label for="admin-location-accuracy">Akurasi maksimum</label><input id="admin-location-accuracy" class="input" type="number" min="1" value="100" required></div></div><div class="form-field"><label for="admin-location-notes">Catatan</label><textarea id="admin-location-notes" class="textarea"></textarea></div><div class="admin-form-actions"><button id="admin-location-submit" class="button button-primary" type="submit">Simpan lokasi</button><button id="admin-location-reset" class="button button-ghost" type="button">Reset</button></div></form></div><div class="card card-padding admin-table-card"><div class="admin-list-toolbar"><input id="admin-location-search" class="input" type="search" placeholder="Cari lokasi"><button id="admin-location-refresh" class="button button-secondary button-small" type="button"><i data-lucide="refresh-cw"></i>Refresh</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Nama</th><th>Koordinat</th><th>Radius</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="admin-location-body"></tbody></table></div><div id="admin-location-pagination"></div></div></div></div>
+        </section>
+
+        <!-- ============ [ PAGE: ADMIN-SHIFT ] ============ -->
+        <section id="view-admin-shift" class="view" data-view="admin/shift">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">Admin workspace</p><h1>Master shift</h1><p>Shift selesai sebelum jam mulai otomatis memerlukan cross-midnight.</p></div></div><div class="admin-layout"><div class="card card-padding"><h2 class="section-title">Shift baru</h2><form id="admin-shift-form" class="form-grid"><input id="admin-shift-id" type="hidden"><div class="form-field"><label for="admin-shift-name">Nama shift</label><input id="admin-shift-name" class="input" placeholder="Contoh: Malam" required></div><div class="grid grid-2"><div class="form-field"><label for="admin-shift-start">Mulai</label><input id="admin-shift-start" class="input" type="time" required></div><div class="form-field"><label for="admin-shift-end">Selesai</label><input id="admin-shift-end" class="input" type="time" required></div></div><label class="cluster" style="font-size:12px;font-weight:700"><input id="admin-shift-cross" type="checkbox"> Shift lintas tengah malam</label><div class="grid grid-2"><div class="form-field"><label for="admin-shift-tolerance">Toleransi (menit)</label><input id="admin-shift-tolerance" class="input" type="number" min="0" value="0"></div><div class="form-field"><label for="admin-shift-early">Boleh lebih awal</label><input id="admin-shift-early" class="input" type="number" min="0" value="120"></div></div><div class="form-field"><label for="admin-shift-window">Window pulang</label><input id="admin-shift-window" class="input" type="number" min="0" value="180"></div><div class="form-field"><label for="admin-shift-notes">Catatan</label><textarea id="admin-shift-notes" class="textarea"></textarea></div><div class="admin-form-actions"><button id="admin-shift-submit" class="button button-primary" type="submit">Simpan shift</button><button id="admin-shift-reset" class="button button-ghost" type="button">Reset</button></div></form></div><div class="card card-padding admin-table-card"><div class="admin-list-toolbar"><input id="admin-shift-search" class="input" type="search" placeholder="Cari shift"><button id="admin-shift-refresh" class="button button-secondary button-small" type="button"><i data-lucide="refresh-cw"></i>Refresh</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Shift</th><th>Jam</th><th>Toleransi</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="admin-shift-body"></tbody></table></div><div id="admin-shift-pagination"></div></div></div></div>
+        </section>
+
+        <!-- ============ [ PAGE: ADMIN-JADWAL ] ============ -->
+        <section id="view-admin-jadwal" class="view" data-view="admin/jadwal">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">Admin workspace</p><h1>Jadwal kerja</h1><p>Tanggal jadwal adalah tanggal mulai shift, termasuk shift lintas tengah malam.</p></div></div><div class="admin-layout"><div class="card card-padding"><h2 class="section-title">Assignment jadwal</h2><form id="admin-schedule-form" class="form-grid"><div class="form-field"><label for="admin-schedule-user">Karyawan</label><select id="admin-schedule-user" class="select" required></select></div><div class="form-field"><label for="admin-schedule-date">Tanggal mulai shift</label><input id="admin-schedule-date" class="input" type="date" required></div><div class="form-field"><label for="admin-schedule-type">Tipe jadwal</label><select id="admin-schedule-type" class="select"><option value="WORK">Hari kerja</option><option value="OFF">Libur</option></select></div><div id="admin-schedule-work-fields" class="form-grid"><div class="form-field"><label for="admin-schedule-shift">Shift</label><select id="admin-schedule-shift" class="select"></select></div><div class="form-field"><label for="admin-schedule-location">Lokasi</label><select id="admin-schedule-location" class="select"></select></div></div><div class="form-field"><label for="admin-schedule-notes">Catatan</label><textarea id="admin-schedule-notes" class="textarea"></textarea></div><button id="admin-schedule-submit" class="button button-primary button-block" type="submit">Simpan jadwal</button></form></div><div class="card card-padding admin-table-card"><div class="admin-list-toolbar"><div class="form-field" style="min-width:150px"><label for="admin-schedule-month">Bulan</label><input id="admin-schedule-month" class="input" type="month"></div><button id="admin-schedule-refresh" class="button button-secondary button-small" type="button"><i data-lucide="refresh-cw"></i>Refresh</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Tanggal</th><th>Karyawan</th><th>Shift</th><th>Lokasi</th><th>Aksi</th></tr></thead><tbody id="admin-schedule-body"></tbody></table></div><div id="admin-schedule-pagination"></div></div></div></div>
+        </section>
+
+        <!-- ============ [ PAGE: ADMIN-PENGAJUAN ] ============ -->
+        <section id="view-admin-pengajuan" class="view" data-view="admin/pengajuan">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">Admin workspace</p><h1>Approval pengajuan</h1><p>Review pengajuan izin, sakit, cuti, dan dinas.</p></div></div><div class="card card-padding"><div class="admin-list-toolbar"><select id="admin-request-status" class="select" style="max-width:180px"><option value="PENDING">Menunggu</option><option value="APPROVED">Disetujui</option><option value="REJECTED">Ditolak</option><option value="">Semua status</option></select><button id="admin-request-refresh" class="button button-secondary button-small" type="button"><i data-lucide="refresh-cw"></i>Refresh</button></div><div id="admin-request-list"></div><div id="admin-request-pagination"></div></div></div>
+        </section>
+
+        <!-- ============ [ PAGE: ADMIN-KOREKSI ] ============ -->
+        <section id="view-admin-koreksi" class="view" data-view="admin/koreksi">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">Admin workspace</p><h1>Koreksi absensi</h1><p>Perubahan waktu selalu membutuhkan alasan dan tercatat di audit log.</p></div></div><div class="admin-layout"><div class="card card-padding"><h2 class="section-title">Koreksi terpilih</h2><form id="admin-correction-form" class="form-grid"><div class="form-field"><label for="admin-correction-id">Attendance ID</label><input id="admin-correction-id" class="input" required></div><div class="form-field"><label for="admin-correction-in">Jam masuk</label><input id="admin-correction-in" class="input" type="datetime-local"></div><div class="form-field"><label for="admin-correction-out">Jam pulang</label><input id="admin-correction-out" class="input" type="datetime-local"></div><div class="form-field"><label for="admin-correction-reason">Alasan koreksi</label><textarea id="admin-correction-reason" class="textarea" required></textarea></div><button id="admin-correction-submit" class="button button-primary button-block" type="submit">Simpan koreksi</button></form></div><div class="card card-padding admin-table-card"><div class="admin-list-toolbar"><div class="form-field" style="min-width:150px"><label for="admin-correction-month">Bulan</label><input id="admin-correction-month" class="input" type="month"></div><button id="admin-correction-refresh" class="button button-secondary button-small" type="button"><i data-lucide="refresh-cw"></i>Refresh</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Attendance ID</th><th>Tanggal</th><th>Karyawan</th><th>Masuk</th><th>Pulang</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="admin-correction-body"></tbody></table></div><div id="admin-correction-pagination"></div></div></div></div>
+        </section>
+
+        <!-- ============ [ PAGE: ADMIN-PENGATURAN ] ============ -->
+        <section id="view-admin-pengaturan" class="view" data-view="admin/pengaturan">
+          <div class="page-container stack"><div class="page-heading"><div><p class="eyebrow">System configuration</p><h1>Pengaturan</h1><p>Pengaturan non-secret yang tersimpan di APP_SETTINGS.</p></div></div><div id="admin-settings-list" class="grid grid-2"></div></div>
+        </section>
+       </main>
+     </div>
+     <nav id="mobile-bottom-nav" class="mobile-bottom-nav" aria-label="Navigasi cepat">
+       <button type="button" data-route="dashboard"><i data-lucide="layout-dashboard"></i><span>Beranda</span></button>
+       <button type="button" data-route="absensi"><i data-lucide="scan-face"></i><span>Absensi</span></button>
+       <button type="button" data-route="pengajuan"><i data-lucide="file-pen-line"></i><span>Pengajuan</span></button>
+       <button type="button" data-route="rekap"><i data-lucide="table-2"></i><span>Rekap</span></button>
+       <button type="button" data-route="profil"><i data-lucide="user-round"></i><span>Profil</span></button>
+     </nav>
+   </div>
+
+  <div id="app-modal" class="modal-root is-hidden" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+    <div class="modal-backdrop" data-modal-close="true"></div>
+    <div class="modal-card"><div class="modal-header"><h2 id="app-modal-title">Konfirmasi</h2><button id="app-modal-close" class="modal-close" type="button" aria-label="Tutup"><i data-lucide="x"></i></button></div><div id="app-modal-body" class="modal-body"></div><div id="app-modal-actions" class="modal-actions"></div></div>
+  </div>
+  <div id="photo-modal" class="modal-root is-hidden" role="dialog" aria-modal="true" aria-labelledby="photo-modal-title"><div class="modal-backdrop" data-photo-close="true"></div><div class="modal-card photo-modal-card"><div class="modal-header"><h2 id="photo-modal-title">Foto absensi</h2><button id="photo-modal-close" class="modal-close" type="button" aria-label="Tutup"><i data-lucide="x"></i></button></div><div id="photo-modal-body" class="photo-modal-body"><div class="loading-spinner" aria-label="Memuat foto"></div></div></div></div>
+  <div id="global-loading" class="global-loading is-hidden" aria-live="polite"><div class="loading-card"><span class="loading-spinner"></span><span id="global-loading-text">Memuat...</span></div></div>
+  <div id="app-toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ============ [ GLOBAL SCRIPT ] ============ -->
+  <script>
+    /* GLOBAL */
+    var CONFIG = {
+      GAS_WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbwafEo1ZLUhGCBBnxfJIlrZndwL0n4bj5mOXEQfcuZSIbvWkqVoeTbuAEi7nXDLKpWOzQ/exec',
+      APP_NAME: 'Attendance Management',
+      TIMEZONE: 'Asia/Jakarta',
+      API_TIMEOUT_MS: 30000,
+      CACHE_NAMESPACE: 'attendance-management:'
+    };
+
+    var AppState = {
+      token: sessionStorage.getItem('attendance_session_token') || '',
+      user: null,
+      route: '',
+      routeQuery: {},
+      page: null,
+      theme: localStorage.getItem('attendance_theme') || 'light',
+      cameraStream: null,
+      currentLocation: null,
+      currentPhoto: null,
+      currentDashboard: null,
+      currentRecapMeta: null,
+      adminUsers: [],
+      adminLocations: [],
+      adminShifts: []
+    };
+
+    function byId(id) { return document.getElementById(id); }
+
+    function createElement(tag, className, text) {
+      var element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text !== undefined && text !== null) element.textContent = String(text);
+      return element;
+    }
+
+    function clearElement(element) {
+      if (!element) return;
+      while (element.firstChild) element.removeChild(element.firstChild);
+    }
+
+    function appendChildren(parent, children) {
+      children.forEach(function (child) { if (child) parent.appendChild(child); });
+      return parent;
+    }
+
+    function icon(name) {
+      var element = document.createElement('i');
+      element.setAttribute('data-lucide', name);
+      element.setAttribute('aria-hidden', 'true');
+      return element;
+    }
+
+    function refreshIcons() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+    }
+
+    function cacheKey(key) { return CONFIG.CACHE_NAMESPACE + key; }
+
+    var LocalCache = {
+      set: function (key, value, ttlMs) {
+        try {
+          localStorage.setItem(cacheKey(key), JSON.stringify({ value: value, expiresAt: Date.now() + ttlMs }));
+        } catch (error) { /* Storage may be disabled. */ }
+      },
+      get: function (key) {
+        try {
+          var raw = localStorage.getItem(cacheKey(key));
+          if (!raw) return null;
+          var entry = JSON.parse(raw);
+          if (!entry || entry.expiresAt < Date.now()) { localStorage.removeItem(cacheKey(key)); return null; }
+          return entry.value;
+        } catch (error) { return null; }
+      },
+      remove: function (key) {
+        try { localStorage.removeItem(cacheKey(key)); } catch (error) { /* Ignore storage errors. */ }
+      },
+      clearMutable: function () {
+        ['dashboard', 'recap', 'requests', 'users', 'employees', 'locations', 'shifts', 'schedules'].forEach(function (key) { LocalCache.remove(key); });
+      }
+    };
+
+    function AppError(code, message) {
+      this.name = 'AppError';
+      this.errorCode = code || 'ERR-SYSTEM-001';
+      this.message = message || 'Terjadi kesalahan sistem.';
+    }
+    AppError.prototype = Object.create(Error.prototype);
+    AppError.prototype.constructor = AppError;
+
+    function api_post(action, payload, authToken) {
+      if (!CONFIG.GAS_WEBAPP_URL || CONFIG.GAS_WEBAPP_URL.indexOf('PASTE_') === 0) {
+        return Promise.reject(new AppError('ERR-CONFIG-001', 'URL Web App GAS belum dikonfigurasi pada CONFIG.GAS_WEBAPP_URL.'));
+      }
+      var body = { action: action, payload: payload || {} };
+      if (authToken || AppState.token) body.token = authToken || AppState.token;
+      var controller = window.AbortController ? new AbortController() : null;
+      var timeout = controller ? window.setTimeout(function () { controller.abort(); }, CONFIG.API_TIMEOUT_MS) : null;
+      return fetch(CONFIG.GAS_WEBAPP_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body),
+        signal: controller ? controller.signal : undefined
+      }).then(function (response) {
+        if (timeout) window.clearTimeout(timeout);
+        return response.text();
+      }).then(function (text) {
+        var result;
+        try { result = JSON.parse(text); } catch (error) { throw new AppError('ERR-SYSTEM-001', 'Respons server tidak valid.'); }
+        if (!result.success) {
+          if (result.errorCode === 'ERR-AUTH-002' || result.errorCode === 'ERR-AUTH-004') app_clearSession(true);
+          throw new AppError(result.errorCode, result.message);
+        }
+        return result;
+      }).catch(function (error) {
+        if (timeout) window.clearTimeout(timeout);
+        if (error instanceof AppError) throw error;
+        if (error.name === 'AbortError') throw new AppError('ERR-NET-001', 'Request terlalu lama. Periksa koneksi Anda.');
+        throw new AppError('ERR-NET-001', 'Tidak dapat terhubung ke server.');
+      });
+    }
+
+    function app_handleError(error, fallback) {
+      var message = error && error.message ? error.message : (fallback || 'Terjadi kesalahan.');
+      var code = error && error.errorCode ? error.errorCode : 'ERR-SYSTEM-001';
+      app_toast(message, code === 'ERR-NET-001' ? 'info' : 'error');
+    }
+
+    function app_clearSession(redirect) {
+      AppState.token = '';
+      AppState.user = null;
+      sessionStorage.removeItem('attendance_session_token');
+      LocalCache.clearMutable();
+      if (redirect) window.location.hash = '#/login';
+    }
+
+    function app_toast(message, type, title) {
+      var region = byId('app-toast-region');
+      if (!region) return;
+      var toast = createElement('div', 'toast toast-' + (type || 'info'));
+      toast.appendChild(icon(type === 'success' ? 'check-circle-2' : type === 'error' ? 'circle-alert' : 'info'));
+      var copy = createElement('div');
+      copy.appendChild(createElement('strong', '', title || (type === 'error' ? 'Perlu perhatian' : type === 'success' ? 'Berhasil' : 'Informasi')));
+      copy.appendChild(createElement('span', '', message));
+      toast.appendChild(copy);
+      region.appendChild(toast);
+      refreshIcons();
+      window.setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4800);
+    }
+
+    function app_showLoading(show, label) {
+      var loading = byId('global-loading');
+      if (!loading) return;
+      loading.classList.toggle('is-hidden', !show);
+      if (label) byId('global-loading-text').textContent = label;
+    }
+
+    function app_buttonLoading(button, loading, label) {
+      if (!button) return;
+      if (loading) {
+        button.dataset.originalText = button.textContent;
+        button.disabled = true;
+        clearElement(button);
+        button.appendChild(createElement('span', 'loading-spinner'));
+        button.appendChild(createElement('span', '', label || 'Memproses...'));
+      } else {
+        button.disabled = false;
+        if (button.dataset.originalText) button.textContent = button.dataset.originalText;
+      }
+    }
+
+    function app_debounce(fn, wait) {
+      var timeout;
+      return function () {
+        var context = this;
+        var args = arguments;
+        window.clearTimeout(timeout);
+        timeout = window.setTimeout(function () { fn.apply(context, args); }, wait);
+      };
+    }
+
+    function app_fileToPhoto(file) {
+      return new Promise(function (resolve, reject) {
+        if (!file || !file.type || file.type.indexOf('image/') !== 0) { reject(new Error('File harus berupa gambar.')); return; }
+        var reader = new FileReader();
+        reader.onerror = function () { reject(new Error('Foto tidak dapat dibaca.')); };
+        reader.onload = function () {
+          var image = new Image();
+          image.onerror = function () { reject(new Error('Foto tidak dapat diproses.')); };
+          image.onload = function () {
+            var max = 1024;
+            var scale = Math.min(1, max / Math.max(image.width, image.height));
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+            canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+            var quality = 0.82; var dataUrl = canvas.toDataURL('image/jpeg', quality);
+            while (dataUrl.length * 0.75 > 1400000 && quality > 0.46) { quality -= 0.08; dataUrl = canvas.toDataURL('image/jpeg', quality); }
+            resolve({ base64: dataUrl, mimeType: 'image/jpeg', capturedAt: new Date().toISOString() });
+          };
+          image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function app_statusClass(status) {
+      var value = String(status || '').toLowerCase();
+      if (value.indexOf('tepat') !== -1 || value.indexOf('setuju') !== -1 || value === 'hadir') return 'status-success';
+      if (value.indexOf('terlambat') !== -1 || value.indexOf('alfa') !== -1 || value.indexOf('tolak') !== -1) return 'status-danger';
+      if (value.indexOf('tunggu') !== -1 || value.indexOf('belum') !== -1 || value.indexOf('jadwal') !== -1) return 'status-info';
+      if (value.indexOf('sakit') !== -1 || value.indexOf('izin') !== -1 || value.indexOf('cuti') !== -1 || value.indexOf('dinas') !== -1) return 'status-warning';
+      return 'status-neutral';
+    }
+
+    function app_badge(status, label) {
+      var badge = createElement('span', 'status-badge ' + app_statusClass(status), label || status || '-');
+      badge.prepend(icon(String(status || '').toLowerCase().indexOf('terlambat') !== -1 ? 'clock-3' : String(status || '').toLowerCase().indexOf('libur') !== -1 ? 'calendar-off' : 'circle-check'));
+      return badge;
+    }
+
+    function app_empty(container, message, iconName) {
+      clearElement(container);
+      var state = createElement('div', 'empty-state');
+      state.appendChild(icon(iconName || 'inbox')); state.appendChild(createElement('div', '', message || 'Belum ada data.'));
+      if (container.tagName === 'TBODY') {
+        var row = createElement('tr'); var cell = createElement('td'); cell.colSpan = 20; cell.appendChild(state); row.appendChild(cell); container.appendChild(row);
+      } else container.appendChild(state);
+      refreshIcons();
+    }
+
+    function app_errorState(container, message, retry) {
+      clearElement(container);
+      var state = createElement('div', 'error-state');
+      state.appendChild(icon('circle-alert')); state.appendChild(createElement('div', '', message || 'Data tidak dapat dimuat.'));
+      if (retry) { var button = createElement('button', 'button button-secondary button-small', 'Coba lagi'); button.type = 'button'; button.addEventListener('click', retry); state.appendChild(button); }
+      if (container.tagName === 'TBODY') {
+        var row = createElement('tr'); var cell = createElement('td'); cell.colSpan = 20; cell.appendChild(state); row.appendChild(cell); container.appendChild(row);
+      } else container.appendChild(state);
+      refreshIcons();
+    }
+
+    function app_skeleton(container, count) {
+      clearElement(container);
+      for (var i = 0; i < (count || 3); i++) {
+        if (container.tagName === 'TBODY') {
+          var row = createElement('tr'); var cell = createElement('td'); cell.colSpan = 20; var tableBlock = createElement('div', 'skeleton skeleton-block'); cell.appendChild(tableBlock); row.appendChild(cell); container.appendChild(row);
+        } else {
+          var block = createElement('div', 'skeleton skeleton-block'); block.style.marginBottom = '10px'; container.appendChild(block);
+        }
+      }
+    }
+
+    function app_renderPagination(container, meta, onPage) {
+      clearElement(container);
+      if (!meta || meta.total <= meta.limit) return;
+      var totalPages = Math.ceil(meta.total / meta.limit);
+      var wrap = createElement('div', 'pagination');
+      wrap.appendChild(createElement('span', 'pagination-info', 'Halaman ' + meta.page + ' dari ' + totalPages + ' | ' + meta.total + ' data'));
+      var actions = createElement('div', 'pagination-actions');
+      var previous = createElement('button', 'button button-secondary button-small', 'Sebelumnya'); previous.type = 'button'; previous.disabled = meta.page <= 1; previous.addEventListener('click', function () { onPage(meta.page - 1); });
+      var next = createElement('button', 'button button-secondary button-small', 'Berikutnya'); next.type = 'button'; next.disabled = meta.page >= totalPages; next.addEventListener('click', function () { onPage(meta.page + 1); });
+      actions.appendChild(previous); actions.appendChild(next); wrap.appendChild(actions); container.appendChild(wrap);
+    }
+
+    function app_monthNow() {
+      var date = new Date();
+      var parts = new Intl.DateTimeFormat('en-CA', { timeZone: CONFIG.TIMEZONE, year: 'numeric', month: '2-digit' }).formatToParts(date);
+      var result = {}; parts.forEach(function (part) { result[part.type] = part.value; });
+      return result.year + '-' + result.month;
+    }
+
+    function app_dateNow() {
+      var date = new Date();
+      var parts = new Intl.DateTimeFormat('en-CA', { timeZone: CONFIG.TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+      var result = {}; parts.forEach(function (part) { result[part.type] = part.value; });
+      return result.year + '-' + result.month + '-' + result.day;
+    }
+
+    function app_displayDate(value) {
+      if (!value) return '-';
+      var text = String(value);
+      var dateOnly = text.slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) { var parts = dateOnly.split('-'); return parts[2] + '/' + parts[1] + '/' + parts[0]; }
+      return text;
+    }
+
+    function app_displayTime(value) {
+      if (!value) return '-';
+      var text = String(value);
+      if (/^\d{2}:\d{2}$/.test(text)) return text;
+      var date = new Date(text);
+      if (isNaN(date.getTime())) return text;
+      return new Intl.DateTimeFormat('id-ID', { timeZone: CONFIG.TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+    }
+
+    function app_displayDateTime(value) {
+      if (!value) return '-';
+      return app_displayDate(value) + ' ' + app_displayTime(value);
+    }
+
+    function app_initials(name) {
+      return String(name || 'A').split(/\s+/).filter(Boolean).slice(0, 2).map(function (part) { return part.charAt(0); }).join('').toUpperCase() || 'A';
+    }
+
+    function app_option(select, value, label) {
+      var option = createElement('option', '', label); option.value = value; select.appendChild(option); return option;
+    }
+
+    function app_parseRoute() {
+      var raw = window.location.hash.replace(/^#\/?/, '');
+      var pieces = raw.split('?');
+       var path = pieces[0].replace(/\/$/, '') || 'login';
+      var query = {};
+      if (pieces[1]) {
+        new URLSearchParams(pieces[1]).forEach(function (value, key) { query[key] = value; });
+      }
+      return { route: path, query: query };
+    }
+
+    function app_updateHeader() {
+      var user = AppState.user;
+      if (!user) return;
+      byId('app-user-name').textContent = user.name || '-';
+      byId('app-user-role').textContent = user.role === 'HR_MANAGER' ? 'HR / Manager' : user.role === 'EMPLOYEE' ? 'Karyawan' : 'Admin';
+      byId('app-user-avatar').textContent = app_initials(user.name);
+      byId('app-admin-nav').classList.toggle('is-hidden', user.role === 'EMPLOYEE');
+      document.querySelectorAll('.app-nav button[data-route]').forEach(function (button) {
+        button.classList.toggle('is-active', button.dataset.route === AppState.route);
+      });
+    }
+
+    function app_updateLeaveCopy() {
+      var dashboardLink = document.querySelector('#view-dashboard .quick-link[href="#/pengajuan"] span span');
+      if (dashboardLink) dashboardLink.textContent = 'Ajukan izin atau sakit dengan foto bukti';
+      var requestHeading = document.querySelector('#view-pengajuan .page-heading p:not(.eyebrow)');
+      if (requestHeading) requestHeading.textContent = 'Ajukan izin atau sakit dengan foto bukti untuk tanggal yang diperlukan.';
+      var approvalHeading = document.querySelector('#view-admin-pengajuan .page-heading p:not(.eyebrow)');
+      if (approvalHeading) approvalHeading.textContent = 'Review pengajuan izin dan sakit dengan lampiran foto.';
+    }
+
+    function app_closeSidebar() { byId('app-sidebar').classList.remove('is-open'); }
+
+    function app_openModal(title, bodyNode, actions) {
+      var modal = byId('app-modal');
+      byId('app-modal-title').textContent = title || 'Konfirmasi';
+      clearElement(byId('app-modal-body')); byId('app-modal-body').appendChild(bodyNode);
+      clearElement(byId('app-modal-actions'));
+      (actions || []).forEach(function (action) { byId('app-modal-actions').appendChild(action); });
+      modal.classList.remove('is-hidden'); document.body.classList.add('modal-open'); refreshIcons();
+      byId('app-modal-close').focus();
+    }
+
+    function app_closeModal() { byId('app-modal').classList.add('is-hidden'); document.body.classList.remove('modal-open'); }
+
+    function app_confirm(title, message, confirmText, callback, danger) {
+      var body = createElement('p', 'muted', message);
+      var cancel = createElement('button', 'button button-secondary', 'Batal'); cancel.type = 'button'; cancel.addEventListener('click', app_closeModal);
+      var confirm = createElement('button', 'button ' + (danger ? 'button-danger' : 'button-primary'), confirmText || 'Konfirmasi'); confirm.type = 'button';
+      confirm.addEventListener('click', function () { app_closeModal(); callback(); });
+      app_openModal(title, body, [cancel, confirm]);
+    }
+
+    function app_openPhoto(attendanceId, side) {
+      var modal = byId('photo-modal');
+      byId('photo-modal-title').textContent = 'Foto absensi';
+      var body = byId('photo-modal-body'); clearElement(body); body.appendChild(createElement('span', 'loading-spinner'));
+      modal.classList.remove('is-hidden'); document.body.classList.add('modal-open');
+      api_post('GET_PHOTO', { attendanceId: attendanceId, side: side }).then(function (response) {
+        clearElement(body);
+        var image = document.createElement('img'); image.alt = 'Foto absensi ' + (side === 'OUT' ? 'pulang' : 'datang'); image.src = 'data:' + response.data.mimeType + ';base64,' + response.data.base64; body.appendChild(image);
+      }).catch(function (error) { clearElement(body); body.appendChild(createElement('p', 'muted', error.message)); app_handleError(error); });
+      refreshIcons(); byId('photo-modal-close').focus();
+    }
+
+    function app_openLeavePhoto(requestId) {
+      var modal = byId('photo-modal');
+      byId('photo-modal-title').textContent = 'Foto lampiran pengajuan';
+      var body = byId('photo-modal-body'); clearElement(body); body.appendChild(createElement('span', 'loading-spinner'));
+      modal.classList.remove('is-hidden'); document.body.classList.add('modal-open');
+      api_post('GET_LEAVE_ATTACHMENT', { requestId: requestId }).then(function (response) {
+        clearElement(body);
+        var image = document.createElement('img'); image.alt = 'Foto lampiran pengajuan'; image.src = 'data:' + response.data.mimeType + ';base64,' + response.data.base64; body.appendChild(image);
+      }).catch(function (error) { clearElement(body); body.appendChild(createElement('p', 'muted', error.message)); app_handleError(error); });
+      refreshIcons(); byId('photo-modal-close').focus();
+    }
+
+    function app_closePhoto() { byId('photo-modal').classList.add('is-hidden'); document.body.classList.remove('modal-open'); clearElement(byId('photo-modal-body')); }
+
+    function app_setTheme(theme) {
+      AppState.theme = theme === 'dark' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', AppState.theme);
+      localStorage.setItem('attendance_theme', AppState.theme);
+    }
+
+    function app_setupGlobalEvents() {
+      app_setTheme(AppState.theme);
+      window.addEventListener('hashchange', app_route);
+      byId('app-menu-button').addEventListener('click', function () { byId('app-sidebar').classList.toggle('is-open'); });
+      byId('app-theme-toggle').addEventListener('click', function () { app_setTheme(AppState.theme === 'dark' ? 'light' : 'dark'); });
+      byId('app-logout').addEventListener('click', function () { app_logout(); });
+      byId('profile-logout').addEventListener('click', function () { app_logout(); });
+      document.querySelectorAll('.app-nav button[data-route]').forEach(function (button) { button.addEventListener('click', function () { app_closeSidebar(); window.location.hash = '#/' + button.dataset.route; }); });
+      byId('app-modal-close').addEventListener('click', app_closeModal);
+      byId('photo-modal-close').addEventListener('click', app_closePhoto);
+      document.querySelectorAll('[data-modal-close="true"]').forEach(function (node) { node.addEventListener('click', app_closeModal); });
+      document.querySelectorAll('[data-photo-close="true"]').forEach(function (node) { node.addEventListener('click', app_closePhoto); });
+    }
+
+    function app_logout() {
+      var token = AppState.token;
+      if (token && CONFIG.GAS_WEBAPP_URL.indexOf('PASTE_') !== 0) {
+        api_post('LOGOUT', {}, token).catch(function () { /* Local logout still completes. */ }).finally(function () { app_clearSession(true); });
+      } else {
+        app_clearSession(true);
+      }
+    }
+
+    function app_bootstrap() {
+      if (!AppState.token || !CONFIG.GAS_WEBAPP_URL || CONFIG.GAS_WEBAPP_URL.indexOf('PASTE_') === 0) {
+        app_route();
+        return;
+      }
+      api_post('GET_ME', {}, AppState.token).then(function (response) {
+        AppState.user = response.data;
+      }).catch(function () {
+        app_clearSession(false);
+      }).finally(function () {
+        app_route();
+      });
+    }
+
+    function app_route() {
+      var parsed = app_parseRoute();
+      AppState.route = parsed.route;
+      AppState.routeQuery = parsed.query;
+      var page = PAGES[AppState.route] || PAGES['404'];
+      if (page.protected && !AppState.token) { window.location.hash = '#/login'; return; }
+      if (page.roles && AppState.user && page.roles.indexOf(AppState.user.role) === -1) { app_toast('Anda tidak memiliki akses ke halaman tersebut.', 'error'); window.location.hash = '#/dashboard'; return; }
+      AppState.page = page;
+      document.querySelectorAll('.view').forEach(function (view) { view.classList.remove('is-active'); });
+      var view = byId('view-' + AppState.route.replace(/\//g, '-')) || byId('view-404');
+      view.classList.add('is-active');
+      var isProtected = Boolean(page.protected);
+      byId('public-shell').classList.toggle('is-hidden', isProtected);
+      byId('protected-shell').classList.toggle('is-hidden', !isProtected);
+      if (isProtected) app_updateHeader();
+      app_updateLeaveCopy();
+      document.title = page.title + ' | ' + CONFIG.APP_NAME;
+      if (typeof page.render === 'function') page.render();
+      if (typeof page.init === 'function') page.init();
+      refreshIcons();
+      window.scrollTo(0, 0);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      app_setupGlobalEvents();
+      app_bootstrap();
+    });
+  </script>
+
+  <!-- ============ [ PAGE SCRIPTS ] ============ -->
+
+  <!-- ============ [ PAGE: HOME ] ============ -->
+  <script>
+    /* PAGE: HOME */
+    function home_render() { refreshIcons(); }
+    function home_init() { refreshIcons(); }
+  </script>
+
+  <!-- ============ [ PAGE: LOGIN ] ============ -->
+  <script>
+    /* PAGE: LOGIN */
+    function login_render() {
+      if (AppState.token && AppState.user) { window.location.hash = '#/dashboard'; return; }
+      byId('login-email').focus();
+    }
+
+    function login_setError(id, message) { byId(id).textContent = message || ''; }
+
+    function login_init() {
+      var form = byId('login-form');
+      if (form.dataset.bound === 'true') return;
+      form.dataset.bound = 'true';
+      byId('login-password-toggle').addEventListener('click', function () {
+        var input = byId('login-password');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        this.setAttribute('aria-label', input.type === 'password' ? 'Tampilkan password' : 'Sembunyikan password');
+      });
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        login_submit();
+      });
+    }
+
+    function login_submit() {
+      var email = byId('login-email').value.trim();
+      var password = byId('login-password').value;
+      login_setError('login-email-error', ''); login_setError('login-password-error', '');
+      if (!email) { login_setError('login-email-error', 'Email wajib diisi.'); return; }
+      if (!password) { login_setError('login-password-error', 'Password wajib diisi.'); return; }
+      var button = byId('login-submit'); app_buttonLoading(button, true, 'Memeriksa...');
+      api_post('LOGIN', { email: email, password: password, userAgent: navigator.userAgent.slice(0, 300) }).then(function (response) {
+        AppState.token = response.data.token;
+        AppState.user = response.data.user;
+        sessionStorage.setItem('attendance_session_token', AppState.token);
+        LocalCache.clearMutable();
+        app_toast('Login berhasil.', 'success');
+        window.location.hash = '#/dashboard';
+      }).catch(function (error) {
+        login_setError('login-password-error', error.message);
+        app_handleError(error);
+      }).finally(function () { app_buttonLoading(button, false); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: FORGOT-PASSWORD ] ============ -->
+  <script>
+    /* PAGE: FORGOT-PASSWORD */
+    function forgotPassword_render() { byId('forgot-password-email').focus(); }
+
+    function forgotPassword_init() {
+      var form = byId('forgot-password-form');
+      if (form.dataset.bound === 'true') return;
+      form.dataset.bound = 'true';
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var email = byId('forgot-password-email').value.trim();
+        byId('forgot-password-email-error').textContent = '';
+        if (!email) { byId('forgot-password-email-error').textContent = 'Email wajib diisi.'; return; }
+        var button = byId('forgot-password-submit'); app_buttonLoading(button, true, 'Mengirim...');
+        api_post('REQUEST_PASSWORD_RESET', { email: email }).then(function (response) {
+          app_toast(response.message, 'success');
+          form.reset();
+        }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+      });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: RESET-PASSWORD ] ============ -->
+  <script>
+    /* PAGE: RESET-PASSWORD */
+    function resetPassword_render() { byId('reset-password-new').focus(); }
+
+    function resetPassword_init() {
+      var form = byId('reset-password-form');
+      if (form.dataset.bound === 'true') return;
+      form.dataset.bound = 'true';
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var password = byId('reset-password-new').value;
+        var confirm = byId('reset-password-confirm').value;
+        byId('reset-password-new-error').textContent = '';
+        byId('reset-password-confirm-error').textContent = '';
+        if (password.length < 8) { byId('reset-password-new-error').textContent = 'Minimal 8 karakter.'; return; }
+        if (password !== confirm) { byId('reset-password-confirm-error').textContent = 'Password tidak sama.'; return; }
+        if (!AppState.routeQuery.token) { app_toast('Token reset tidak tersedia.', 'error'); return; }
+        var button = byId('reset-password-submit'); app_buttonLoading(button, true, 'Menyimpan...');
+        api_post('RESET_PASSWORD', { resetToken: AppState.routeQuery.token, newPassword: password }).then(function (response) {
+          app_toast(response.message, 'success');
+          window.setTimeout(function () { window.location.hash = '#/login'; }, 900);
+        }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+      });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: DASHBOARD ] ============ -->
+  <script>
+    /* PAGE: DASHBOARD */
+    function dashboard_render() {
+      app_skeleton(byId('dashboard-summary-grid'), 4);
+      app_skeleton(byId('dashboard-today-card'), 2);
+      app_skeleton(byId('dashboard-recent-requests'), 2);
+    }
+
+    function dashboard_init() {
+      dashboard_load();
+    }
+
+    function dashboard_load() {
+      api_post('GET_DASHBOARD', { month: app_monthNow() }).then(function (response) {
+        AppState.currentDashboard = response.data;
+        AppState.user = response.data.user || AppState.user;
+        app_updateHeader();
+        dashboard_renderSummary(response.data.summary || {});
+        dashboard_renderToday(response.data.today || {});
+        dashboard_renderRequests(response.data.recentRequests || []);
+        refreshIcons();
+      }).catch(function (error) {
+        app_errorState(byId('dashboard-summary-grid'), error.message, dashboard_load);
+        app_errorState(byId('dashboard-today-card'), 'Ringkasan hari ini belum dapat dimuat.', dashboard_load);
+        app_errorState(byId('dashboard-recent-requests'), 'Pengajuan belum dapat dimuat.', dashboard_load);
+        app_handleError(error);
+      });
+    }
+
+    function dashboard_renderSummary(summary) {
+      var container = byId('dashboard-summary-grid'); clearElement(container);
+      var metrics = [
+        ['Hadir', summary.hadir || 0, 'Termasuk tepat waktu dan terlambat'],
+        ['Terlambat', summary.totalLateEvents || 0, 'Kejadian bulan ini'],
+        ['Total waktu', summary.totalLateDisplay || '00:00', 'Durasi terlambat'],
+        ['Pengajuan', (summary.izin || 0) + (summary.sakit || 0), 'Izin dan sakit disetujui bulan ini']
+      ];
+      metrics.forEach(function (metric) {
+        var card = createElement('div', 'metric-card');
+        card.appendChild(createElement('span', '', metric[0]));
+        card.appendChild(createElement('strong', '', metric[1]));
+        card.appendChild(createElement('small', '', metric[2]));
+        container.appendChild(card);
+      });
+    }
+
+    function dashboard_renderToday(today) {
+      var card = byId('dashboard-today-card'); clearElement(card);
+      card.className = 'today-card';
+      var eyebrow = createElement('p', 'eyebrow', today.isOvernightContext ? 'Shift malam aktif' : 'Status hari ini');
+      card.appendChild(eyebrow);
+      var attendance = today.attendance;
+      var schedule = today.schedule;
+      var title = attendance ? (attendance.checkOutAt ? 'Absensi selesai' : 'Menunggu absen pulang') : schedule && schedule.scheduleType === 'WORK' ? 'Siap untuk absensi' : 'Tidak ada jadwal kerja';
+      card.appendChild(createElement('h2', '', title));
+      var meta = createElement('div', 'today-meta');
+      if (schedule) {
+        meta.appendChild(createElement('span', '', (schedule.shiftName || 'Shift') + ' | ' + (schedule.startTime || '-') + ' - ' + (schedule.endTime || '-')));
+        if (schedule.crossMidnight) meta.appendChild(createElement('span', '', 'Selesai ' + app_displayDate(schedule.shiftEndAt)));
+        if (schedule.location) meta.appendChild(createElement('span', '', schedule.location.name));
+      } else {
+        meta.appendChild(createElement('span', '', 'Jadwal belum tersedia'));
+      }
+      card.appendChild(meta);
+      if (attendance) {
+        var attendanceLine = createElement('p', '', 'Masuk ' + app_displayTime(attendance.checkInAt) + (attendance.checkOutAt ? ' | Pulang ' + app_displayTime(attendance.checkOutAt) : ''));
+        attendanceLine.style.margin = '17px 0 0'; attendanceLine.style.fontSize = '12px'; attendanceLine.style.opacity = '0.82'; card.appendChild(attendanceLine);
+        card.appendChild(app_badge(attendance.status === 'TERLAMBAT' ? 'Terlambat' : 'Tepat Waktu', attendance.status === 'TERLAMBAT' ? 'Terlambat' : 'Tepat Waktu'));
+      }
+      var actions = createElement('div', 'today-actions');
+      if (today.canCheckIn) { var inLink = createElement('a', 'button button-primary', 'Absen datang'); inLink.href = '#/absensi'; inLink.prepend(icon('log-in')); actions.appendChild(inLink); }
+      if (today.canCheckOut) { var outLink = createElement('a', 'button button-secondary', 'Absen pulang'); outLink.href = '#/absensi'; outLink.prepend(icon('log-out')); actions.appendChild(outLink); }
+      if (!today.canCheckIn && !today.canCheckOut && !attendance) { var recapLink = createElement('a', 'button button-secondary', 'Lihat rekap'); recapLink.href = '#/rekap'; actions.appendChild(recapLink); }
+      card.appendChild(actions);
+    }
+
+    function dashboard_renderRequests(requests) {
+      var container = byId('dashboard-recent-requests'); clearElement(container);
+      if (!requests.length) { app_empty(container, 'Belum ada pengajuan.', 'file-plus-2'); return; }
+      requests.forEach(function (request) {
+        var row = createElement('div', 'dashboard-request-row');
+        var copy = createElement('div'); copy.appendChild(createElement('strong', '', request.type)); copy.appendChild(createElement('span', '', app_displayDate(request.startDate) + ' - ' + app_displayDate(request.endDate)));
+        row.appendChild(copy); row.appendChild(app_badge(request.status, request.status === 'PENDING' ? 'Menunggu' : request.status === 'APPROVED' ? 'Disetujui' : request.status === 'REJECTED' ? 'Ditolak' : 'Dibatalkan'));
+        container.appendChild(row);
+      });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: ABSENSI ] ============ -->
+  <script>
+    /* PAGE: ABSENSI */
+    function absensi_render() {
+      absensi_stopCamera();
+      AppState.currentPhoto = null;
+      AppState.currentLocation = null;
+      byId('absensi-photo-preview').classList.add('is-hidden');
+      byId('absensi-video').classList.add('is-hidden');
+      byId('absensi-camera-placeholder').classList.remove('is-hidden');
+      byId('absensi-camera-guide').classList.add('is-hidden');
+      byId('absensi-capture').classList.add('is-hidden');
+      byId('absensi-clear-photo').classList.add('is-hidden');
+      byId('absensi-context').replaceChildren(createElement('div', 'skeleton skeleton-line'), createElement('div', 'skeleton skeleton-line'), createElement('div', 'skeleton skeleton-line'));
+      byId('absensi-gps-status').replaceChildren(icon('map-pin'), createElement('div'));
+      byId('absensi-gps-status').lastChild.appendChild(createElement('strong', '', 'Lokasi belum dibaca'));
+      byId('absensi-gps-status').lastChild.appendChild(createElement('span', '', 'Tekan tombol untuk mendapatkan lokasi GPS.'));
+      absensi_updateActions();
+    }
+
+    function absensi_init() {
+      var start = byId('absensi-start-camera');
+      if (start.dataset.bound !== 'true') {
+        start.dataset.bound = 'true';
+        start.addEventListener('click', absensi_startCamera);
+        byId('absensi-capture').addEventListener('click', absensi_capture);
+        byId('absensi-clear-photo').addEventListener('click', absensi_clearPhoto);
+        byId('absensi-get-location').addEventListener('click', absensi_getLocation);
+        byId('absensi-check-in').addEventListener('click', function () { absensi_submit('IN'); });
+        byId('absensi-check-out').addEventListener('click', function () { absensi_submit('OUT'); });
+      }
+      absensi_load();
+    }
+
+    function absensi_load() {
+      api_post('GET_DASHBOARD', { month: app_monthNow() }).then(function (response) {
+        AppState.currentDashboard = response.data;
+        AppState.user = response.data.user || AppState.user;
+        app_updateHeader();
+        absensi_renderContext(response.data.today || {});
+        absensi_updateActions();
+      }).catch(function (error) { app_errorState(byId('absensi-context'), error.message, absensi_load); app_handleError(error); });
+    }
+
+    function absensi_renderContext(today) {
+      var container = byId('absensi-context'); clearElement(container);
+      var schedule = today.schedule;
+      var attendance = today.attendance;
+      if (!schedule) { app_empty(container, 'Belum ada jadwal untuk waktu ini.', 'calendar-off'); return; }
+      var rows = [
+        ['Tanggal kerja', app_displayDate(schedule.workDate)],
+        ['Shift', schedule.shiftName + ' (' + schedule.startTime + ' - ' + schedule.endTime + ')'],
+        ['Mulai resmi', app_displayDateTime(schedule.shiftStartAt)],
+        ['Selesai resmi', app_displayDateTime(schedule.shiftEndAt)],
+        ['Lokasi', schedule.location ? schedule.location.name : 'Belum diatur']
+      ];
+      if (schedule.crossMidnight) rows.push(['Konteks', 'Shift selesai pada hari berikutnya']);
+      if (attendance) rows.push(['Status', attendance.checkOutAt ? 'Sudah lengkap' : 'Menunggu pulang']);
+      rows.forEach(function (row) { var item = createElement('div', 'attendance-context-row'); item.appendChild(createElement('span', '', row[0])); item.appendChild(createElement('strong', '', row[1])); container.appendChild(item); });
+    }
+
+    function absensi_startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { app_toast('Browser tidak mendukung kamera.', 'error'); return; }
+      var button = byId('absensi-start-camera'); app_buttonLoading(button, true, 'Membuka...');
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false }).then(function (stream) {
+        AppState.cameraStream = stream;
+        var video = byId('absensi-video'); video.srcObject = stream; video.classList.remove('is-hidden');
+        byId('absensi-camera-placeholder').classList.add('is-hidden');
+        byId('absensi-camera-guide').classList.remove('is-hidden');
+        byId('absensi-capture').classList.remove('is-hidden');
+        byId('absensi-camera-help').textContent = 'Posisikan wajah di dalam garis lalu ambil selfie.';
+      }).catch(function () { app_toast('Izin kamera diperlukan untuk melakukan absensi.', 'error'); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function absensi_stopCamera() {
+      if (AppState.cameraStream) {
+        AppState.cameraStream.getTracks().forEach(function (track) { track.stop(); });
+        AppState.cameraStream = null;
+      }
+      var video = byId('absensi-video');
+      if (video) video.srcObject = null;
+    }
+
+    function absensi_capture() {
+      var video = byId('absensi-video');
+      if (!video.videoWidth || !video.videoHeight) { app_toast('Kamera belum siap. Coba lagi.', 'error'); return; }
+      var canvas = byId('absensi-canvas');
+      var width = Math.min(1280, video.videoWidth);
+      var height = Math.round(video.videoHeight * (width / video.videoWidth));
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      AppState.currentPhoto = { base64: dataUrl, mimeType: 'image/jpeg', capturedAt: new Date().toISOString() };
+      var preview = byId('absensi-photo-preview'); preview.src = dataUrl; preview.classList.remove('is-hidden');
+      video.classList.add('is-hidden'); byId('absensi-camera-guide').classList.add('is-hidden'); byId('absensi-capture').classList.add('is-hidden'); byId('absensi-clear-photo').classList.remove('is-hidden');
+      absensi_stopCamera(); absensi_updateActions();
+      app_toast('Selfie siap dikirim.', 'success');
+    }
+
+    function absensi_clearPhoto() {
+      AppState.currentPhoto = null;
+      byId('absensi-photo-preview').classList.add('is-hidden');
+      byId('absensi-clear-photo').classList.add('is-hidden');
+      if (AppState.cameraStream) { byId('absensi-video').classList.remove('is-hidden'); byId('absensi-capture').classList.remove('is-hidden'); }
+      else byId('absensi-camera-placeholder').classList.remove('is-hidden');
+      absensi_updateActions();
+    }
+
+    function absensi_haversine(lat1, lon1, lat2, lon2) {
+      var radius = 6371000; var rad = Math.PI / 180;
+      var dLat = (lat2 - lat1) * rad; var dLon = (lon2 - lon1) * rad;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function absensi_getLocation() {
+      if (!navigator.geolocation) { app_toast('Browser tidak mendukung GPS.', 'error'); return; }
+      var button = byId('absensi-get-location'); app_buttonLoading(button, true, 'Mendeteksi...');
+      navigator.geolocation.getCurrentPosition(function (position) {
+        var coords = position.coords;
+        AppState.currentLocation = { latitude: coords.latitude, longitude: coords.longitude, accuracyM: coords.accuracy, capturedAt: new Date().toISOString() };
+        var schedule = AppState.currentDashboard && AppState.currentDashboard.today ? AppState.currentDashboard.today.schedule : null;
+        var status = byId('absensi-gps-status'); clearElement(status); status.appendChild(icon('map-pin-check'));
+        var copy = createElement('div'); copy.appendChild(createElement('strong', '', 'Lokasi terdeteksi')); copy.appendChild(createElement('span', '', 'Akurasi sekitar ' + Math.round(coords.accuracy) + ' meter.')); status.appendChild(copy);
+        var detail = byId('absensi-location-details'); clearElement(detail); detail.textContent = 'Koordinat: ' + coords.latitude.toFixed(6) + ', ' + coords.longitude.toFixed(6);
+        if (schedule && schedule.location) {
+          var location = schedule.location;
+          var distance = absensi_haversine(coords.latitude, coords.longitude, location.latitude, location.longitude);
+          var valid = distance <= location.radiusM && coords.accuracy <= location.maxAccuracyM;
+          detail.textContent += ' | Jarak: ' + Math.round(distance) + ' m dari ' + location.name;
+          status.classList.toggle('is-invalid', !valid);
+          copy.lastChild.textContent = valid ? 'Berada dalam radius ' + location.radiusM + ' meter.' : 'Di luar radius atau akurasi belum cukup.';
+          status.style.background = valid ? 'var(--color-success-bg)' : 'var(--color-danger-bg)';
+          status.style.color = valid ? 'var(--color-success)' : 'var(--color-danger)';
+        }
+        absensi_updateActions();
+        app_buttonLoading(button, false);
+      }, function (error) {
+        var message = error.code === 1 ? 'Izin lokasi ditolak.' : 'Lokasi belum dapat dibaca. Coba lagi.';
+        app_toast(message, 'error');
+        app_buttonLoading(button, false);
+      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    }
+
+    function absensi_locationValid() {
+      var today = AppState.currentDashboard && AppState.currentDashboard.today;
+      var location = today && today.schedule && today.schedule.location;
+      if (!AppState.currentLocation || !location) return false;
+      var distance = absensi_haversine(AppState.currentLocation.latitude, AppState.currentLocation.longitude, location.latitude, location.longitude);
+      return distance <= location.radiusM && AppState.currentLocation.accuracyM <= location.maxAccuracyM;
+    }
+
+    function absensi_updateActions() {
+      var today = AppState.currentDashboard && AppState.currentDashboard.today;
+      var ready = Boolean(AppState.currentPhoto && AppState.currentLocation && absensi_locationValid());
+      byId('absensi-check-in').disabled = !(ready && today && today.canCheckIn);
+      byId('absensi-check-out').disabled = !(ready && today && today.canCheckOut);
+      byId('absensi-action-note').textContent = ready ? 'Validasi siap. Backend akan melakukan pemeriksaan akhir.' : 'Selfie dan lokasi valid diperlukan.';
+    }
+
+    function absensi_submit(side) {
+      var today = AppState.currentDashboard && AppState.currentDashboard.today;
+      if (!today || !AppState.currentPhoto || !AppState.currentLocation || !absensi_locationValid()) { app_toast('Lengkapi selfie dan lokasi yang valid terlebih dahulu.', 'error'); return; }
+      var button = byId(side === 'IN' ? 'absensi-check-in' : 'absensi-check-out'); app_buttonLoading(button, true, 'Mengirim...');
+      var payload = { latitude: AppState.currentLocation.latitude, longitude: AppState.currentLocation.longitude, accuracyM: AppState.currentLocation.accuracyM, photoBase64: AppState.currentPhoto.base64, mimeType: AppState.currentPhoto.mimeType, capturedAt: AppState.currentPhoto.capturedAt };
+      if (side === 'IN') payload.scheduleId = today.schedule.id; else payload.attendanceId = today.attendance.id;
+      api_post(side === 'IN' ? 'CHECK_IN' : 'CHECK_OUT', payload).then(function (response) {
+        app_toast(response.message, 'success');
+        LocalCache.clearMutable();
+        AppState.currentPhoto = null; AppState.currentLocation = null;
+        absensi_render(); absensi_load();
+      }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: PENGAJUAN ] ============ -->
+  <script>
+    /* PAGE: PENGAJUAN */
+    var LeavePhotoState = { photo: null };
+
+    function pengajuan_ensurePhotoField() {
+      var form = byId('request-form');
+      if (!form || byId('request-photo')) return;
+      var field = createElement('div', 'form-field');
+      var label = createElement('label', '', 'Foto lampiran'); label.setAttribute('for', 'request-photo'); field.appendChild(label);
+      var input = document.createElement('input'); input.id = 'request-photo'; input.className = 'input'; input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment'; input.required = true; field.appendChild(input);
+      field.appendChild(createElement('small', '', 'Wajib. Pilih foto bukti izin atau sakit dari kamera/galeri.'));
+      var preview = document.createElement('img'); preview.id = 'request-photo-preview'; preview.className = 'request-photo-preview is-hidden'; preview.alt = 'Preview foto lampiran'; field.appendChild(preview);
+      field.appendChild(createElement('span', 'field-error', '')).id = 'request-photo-error';
+      var submit = byId('request-submit'); submit.parentNode.insertBefore(field, submit);
+      input.addEventListener('change', pengajuan_photoSelected);
+    }
+
+    function pengajuan_photoSelected(event) {
+      var input = event.target;
+      var file = input.files && input.files[0];
+      var error = byId('request-photo-error');
+      if (error) error.textContent = '';
+      LeavePhotoState.photo = null;
+      if (!file) { byId('request-photo-preview').classList.add('is-hidden'); return; }
+      app_fileToPhoto(file).then(function (photo) {
+        LeavePhotoState.photo = photo;
+        var preview = byId('request-photo-preview'); preview.src = photo.base64; preview.classList.remove('is-hidden');
+      }).catch(function (reason) {
+        input.value = '';
+        if (error) error.textContent = reason.message;
+        app_toast(reason.message, 'error');
+      });
+    }
+
+    function pengajuan_resetPhoto() {
+      LeavePhotoState.photo = null;
+      var input = byId('request-photo'); var preview = byId('request-photo-preview'); var error = byId('request-photo-error');
+      if (input) input.value = '';
+      if (preview) { preview.src = ''; preview.classList.add('is-hidden'); }
+      if (error) error.textContent = '';
+    }
+
+    function pengajuan_render() {
+      pengajuan_ensurePhotoField();
+      var type = byId('request-type');
+      if (type) { type.replaceChildren(); app_option(type, 'IZIN', 'Izin'); app_option(type, 'SAKIT', 'Sakit'); }
+      var copy = document.querySelector('#view-pengajuan .page-heading p:not(.eyebrow)');
+      if (copy) copy.textContent = 'Ajukan izin atau sakit dengan foto bukti untuk tanggal yang diperlukan.';
+      if (!byId('request-start-date').value) byId('request-start-date').value = app_dateNow();
+      if (!byId('request-end-date').value) byId('request-end-date').value = app_dateNow();
+      app_skeleton(byId('request-list'), 3);
+    }
+
+    function pengajuan_init() {
+      var form = byId('request-form');
+      if (form.dataset.bound !== 'true') {
+        form.dataset.bound = 'true';
+        form.addEventListener('submit', function (event) { event.preventDefault(); pengajuan_submit(); });
+        byId('request-refresh').addEventListener('click', pengajuan_load);
+      }
+      pengajuan_load(1);
+    }
+
+    function pengajuan_submit() {
+      var button = byId('request-submit');
+      var payload = { type: byId('request-type').value, startDate: byId('request-start-date').value, endDate: byId('request-end-date').value, reason: byId('request-reason').value.trim() };
+      if (LeavePhotoState.photo) { payload.photoBase64 = LeavePhotoState.photo.base64; payload.mimeType = LeavePhotoState.photo.mimeType; payload.capturedAt = LeavePhotoState.photo.capturedAt; }
+      if (!payload.startDate || !payload.endDate || !payload.reason || !LeavePhotoState.photo) { app_toast('Tanggal, keterangan, dan foto lampiran wajib diisi.', 'error'); return; }
+      if (payload.startDate > payload.endDate) { app_toast('Tanggal selesai tidak boleh sebelum tanggal mulai.', 'error'); return; }
+      app_buttonLoading(button, true, 'Mengirim...');
+      api_post('CREATE_LEAVE_REQUEST', payload).then(function (response) {
+        app_toast(response.message, 'success'); byId('request-form').reset(); pengajuan_resetPhoto(); LocalCache.clearMutable(); pengajuan_render(); pengajuan_load(1);
+      }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function pengajuan_load(page) {
+      var container = byId('request-list');
+      if (!page) page = 1;
+      app_skeleton(container, 3);
+      api_post('LIST_LEAVE_REQUESTS', { page: page, limit: 8 }).then(function (response) {
+        pengajuan_renderList(response.data || []);
+        app_renderPagination(byId('request-pagination'), response.meta, pengajuan_load);
+      }).catch(function (error) { app_errorState(container, error.message, pengajuan_load); app_handleError(error); });
+    }
+
+    function pengajuan_typeLabel(type) { return ({ IZIN: 'Izin', SAKIT: 'Sakit' })[type] || type; }
+
+    function pengajuan_renderList(requests) {
+      var container = byId('request-list'); clearElement(container);
+      if (!requests.length) { app_empty(container, 'Belum ada pengajuan.', 'file-plus-2'); return; }
+      requests.forEach(function (request) {
+        var item = createElement('article', 'request-item');
+        var header = createElement('div', 'request-item-header');
+        header.appendChild(createElement('strong', '', pengajuan_typeLabel(request.type)));
+        header.appendChild(app_badge(request.status, request.status === 'PENDING' ? 'Menunggu' : request.status === 'APPROVED' ? 'Disetujui' : request.status === 'REJECTED' ? 'Ditolak' : 'Dibatalkan'));
+        item.appendChild(header);
+        item.appendChild(createElement('p', '', request.reason || 'Tanpa keterangan'));
+        var meta = createElement('div', 'request-item-meta'); meta.appendChild(createElement('span', '', app_displayDate(request.startDate) + ' - ' + app_displayDate(request.endDate))); if (request.reviewedAt) meta.appendChild(createElement('span', '', 'Diproses ' + app_displayDateTime(request.reviewedAt))); item.appendChild(meta);
+        if (request.hasAttachment) { var attachment = createElement('button', 'button button-secondary button-small', 'Lihat foto'); attachment.type = 'button'; attachment.style.marginTop = '10px'; attachment.addEventListener('click', function () { app_openLeavePhoto(request.id); }); item.appendChild(attachment); }
+        if (request.reviewerNote) item.appendChild(createElement('p', '', 'Catatan reviewer: ' + request.reviewerNote));
+        if (request.status === 'PENDING') { var cancel = createElement('button', 'button button-ghost button-small', 'Batalkan'); cancel.type = 'button'; cancel.style.marginTop = '10px'; cancel.addEventListener('click', function () { app_confirm('Batalkan pengajuan?', 'Pengajuan ini akan berubah menjadi dibatalkan.', 'Batalkan', function () { pengajuan_cancel(request.id); }, true); }); item.appendChild(cancel); }
+        container.appendChild(item);
+      });
+      refreshIcons();
+    }
+
+    function pengajuan_cancel(id) {
+      api_post('CANCEL_LEAVE_REQUEST', { requestId: id }).then(function (response) { app_toast(response.message, 'success'); LocalCache.clearMutable(); pengajuan_load(1); }).catch(function (error) { app_handleError(error); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: REKAP ] ============ -->
+  <script>
+    /* PAGE: REKAP */
+    function rekap_render() {
+      if (!byId('rekap-month').value) byId('rekap-month').value = app_monthNow();
+      byId('rekap-table-body').replaceChildren(createElement('tr'));
+      app_skeleton(byId('rekap-summary-grid'), 5);
+    }
+
+    function rekap_init() {
+      var refresh = byId('rekap-refresh');
+      if (refresh.dataset.bound !== 'true') {
+        refresh.dataset.bound = 'true';
+        refresh.addEventListener('click', function () { rekap_load(1); });
+        byId('rekap-month').addEventListener('change', function () { rekap_load(1); });
+        byId('rekap-search').addEventListener('input', app_debounce(function () { rekap_load(1); }, 400));
+        byId('rekap-user').addEventListener('change', function () { rekap_load(1); });
+        byId('rekap-export').addEventListener('click', rekap_export);
+      }
+      var isAdmin = AppState.user && AppState.user.role !== 'EMPLOYEE';
+      byId('rekap-user-field').classList.toggle('is-hidden', !isAdmin);
+      byId('rekap-export').classList.toggle('is-hidden', !isAdmin);
+      if (isAdmin) rekap_loadUsers(); else rekap_load(1);
+    }
+
+    function rekap_loadUsers() {
+      var cachedUsers = LocalCache.get('employees');
+      if (cachedUsers) {
+        rekap_applyUsers(cachedUsers);
+        return;
+      }
+      api_post('LIST_USERS', { page: 1, limit: 100, role: 'EMPLOYEE', isActive: true }).then(function (response) {
+        LocalCache.set('employees', response.data || [], 300000);
+        rekap_applyUsers(response.data || []);
+      }).catch(function (error) { app_handleError(error); });
+    }
+
+    function rekap_applyUsers(users) {
+      var select = byId('rekap-user'); clearElement(select);
+      if (!users.length) { app_option(select, '', 'Tidak ada karyawan'); rekap_load(1); return; }
+      users.forEach(function (user) { app_option(select, user.id, user.employeeCode + ' - ' + user.name); });
+      if (!select.value) select.value = users[0].id;
+      rekap_load(1);
+    }
+
+    function rekap_load(page) {
+      var month = byId('rekap-month').value || app_monthNow();
+      var userId = byId('rekap-user').value || undefined;
+      var payload = { month: month, page: page || 1, limit: 31, search: byId('rekap-search').value.trim() };
+      if (userId) payload.userId = userId;
+      app_skeleton(byId('rekap-table-state'), 1);
+      api_post('GET_MONTHLY_RECAP', payload).then(function (response) {
+        byId('rekap-table-state').replaceChildren();
+        rekap_renderTable(response.data || []);
+        AppState.currentRecapMeta = response.meta;
+        app_renderPagination(byId('rekap-pagination'), response.meta, rekap_load);
+        return api_post('GET_MONTHLY_SUMMARY', userId ? { month: month, userId: userId } : { month: month });
+      }).then(function (summaryResponse) {
+        if (summaryResponse) rekap_renderSummary(Array.isArray(summaryResponse.data) ? summaryResponse.data[0] || {} : summaryResponse.data || {});
+      }).catch(function (error) { app_errorState(byId('rekap-table-state'), error.message, rekap_load); app_handleError(error); });
+    }
+
+    function rekap_renderSummary(summary) {
+      var container = byId('rekap-summary-grid'); clearElement(container);
+      var items = [['Hadir', summary.hadir || 0], ['Tepat waktu', summary.tepatWaktu || 0], ['Terlambat', summary.totalLateEvents || 0], ['Total waktu terlambat', summary.totalLateDisplay || '00:00'], ['Izin / sakit', (summary.izin || 0) + (summary.sakit || 0)], ['Alfa', summary.alfa || 0]];
+      items.forEach(function (item) { var card = createElement('div', 'recap-summary-card'); card.appendChild(createElement('span', '', item[0])); card.appendChild(createElement('strong', '', item[1])); container.appendChild(card); });
+    }
+
+    function rekap_td(text) { return createElement('td', '', text === undefined || text === null || text === '' ? '-' : text); }
+
+    function rekap_photoButton(row, side) {
+      if (!(side === 'IN' ? row.checkInPhoto : row.checkOutPhoto) || !row.attendanceId) return createElement('span', 'muted', '-');
+      var button = createElement('button', 'photo-thumb', ''); button.type = 'button'; button.setAttribute('aria-label', 'Buka foto ' + (side === 'IN' ? 'masuk' : 'pulang')); button.appendChild(icon('image')); button.addEventListener('click', function () { app_openPhoto(row.attendanceId, side); }); return button;
+    }
+
+    function rekap_renderTable(rows) {
+      var body = byId('rekap-table-body'); clearElement(body);
+      if (!rows.length) { var tr = createElement('tr'); var td = createElement('td', 'table-empty', 'Belum ada data pada filter ini.'); td.colSpan = 10; tr.appendChild(td); body.appendChild(tr); return; }
+      rows.forEach(function (row) {
+        var tr = createElement('tr');
+        tr.appendChild(rekap_td(row.dateDisplay)); tr.appendChild(rekap_td(row.shift || (row.status === 'Libur' ? 'Libur' : '-'))); tr.appendChild(rekap_td(row.jamMasuk));
+        var inPhoto = createElement('td'); inPhoto.appendChild(rekap_photoButton(row, 'IN')); tr.appendChild(inPhoto); tr.appendChild(rekap_td(row.kedatanganOffset)); tr.appendChild(rekap_td(row.jamPulang));
+        var outPhoto = createElement('td'); outPhoto.appendChild(rekap_photoButton(row, 'OUT')); tr.appendChild(outPhoto); tr.appendChild(rekap_td(row.kepulanganOffset));
+        var status = createElement('td'); status.appendChild(app_badge(row.status)); tr.appendChild(status); tr.appendChild(rekap_td(row.keterangan)); body.appendChild(tr);
+      });
+      refreshIcons();
+    }
+
+    function rekap_export() {
+      var button = byId('rekap-export'); app_buttonLoading(button, true, 'Menyiapkan...');
+      var payload = { month: byId('rekap-month').value || app_monthNow() };
+      if (byId('rekap-user').value) payload.userId = byId('rekap-user').value;
+      api_post('EXPORT_ATTENDANCE_CSV', payload).then(function (response) {
+        var blob = new Blob([response.data.csv], { type: 'text/csv;charset=utf-8' });
+        var url = URL.createObjectURL(blob); var link = document.createElement('a'); link.href = url; link.download = response.data.fileName; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); app_toast('CSV berhasil dibuat.', 'success');
+      }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: PROFIL ] ============ -->
+  <script>
+    /* PAGE: PROFIL */
+    function profil_render() {
+      var user = AppState.user || {};
+      byId('profile-avatar').textContent = app_initials(user.name);
+      byId('profile-name').textContent = user.name || '-';
+      byId('profile-role').textContent = user.role === 'HR_MANAGER' ? 'HR / Manager' : user.role === 'EMPLOYEE' ? 'Karyawan' : 'Admin';
+      var fields = byId('profile-fields'); clearElement(fields);
+      [['Kode karyawan', user.employeeCode], ['Email', user.email], ['Departemen', user.department || '-'], ['Tanggal masuk', app_displayDate(user.joinDate)], ['Status akun', user.isActive ? 'Aktif' : 'Nonaktif'], ['Login terakhir', app_displayDateTime(user.lastLoginAt)]].forEach(function (item) {
+        var field = createElement('div', 'profile-field'); field.appendChild(createElement('span', '', item[0])); field.appendChild(createElement('strong', '', item[1] || '-')); fields.appendChild(field);
+      });
+    }
+    function profil_init() { refreshIcons(); }
+  </script>
+
+  <!-- ============ [ PAGE: ADMIN-KARYAWAN ] ============ -->
+  <script>
+    /* PAGE: ADMIN-KARYAWAN */
+    var AdminUserState = { page: 1, search: '', rows: [] };
+
+    function adminUser_render() {
+      if (!byId('admin-user-join-date').value) byId('admin-user-join-date').value = app_dateNow();
+      adminUser_resetForm();
+    }
+
+    function adminUser_init() {
+      var form = byId('admin-user-form');
+      if (form.dataset.bound !== 'true') {
+        form.dataset.bound = 'true';
+        form.addEventListener('submit', function (event) { event.preventDefault(); adminUser_submit(); });
+        byId('admin-user-reset').addEventListener('click', adminUser_resetForm);
+        byId('admin-user-refresh').addEventListener('click', function () { adminUser_load(1); });
+        byId('admin-user-search').addEventListener('input', app_debounce(function () { AdminUserState.search = byId('admin-user-search').value.trim(); adminUser_load(1); }, 350));
+      }
+      adminUser_load(AdminUserState.page || 1);
+    }
+
+    function adminUser_resetForm() {
+      byId('admin-user-id').value = '';
+      byId('admin-user-form').reset();
+      byId('admin-user-join-date').value = app_dateNow();
+      byId('admin-user-password').required = true;
+      byId('admin-user-submit').textContent = 'Simpan karyawan';
+    }
+
+    function adminUser_load(page) {
+      AdminUserState.page = page || 1;
+      var body = byId('admin-user-body'); app_skeleton(body, 4);
+      api_post('LIST_USERS', { page: AdminUserState.page, limit: 10, search: AdminUserState.search }).then(function (response) {
+        AdminUserState.rows = response.data || [];
+        adminUser_renderRows(AdminUserState.rows);
+        app_renderPagination(byId('admin-user-pagination'), response.meta, adminUser_load);
+      }).catch(function (error) { app_errorState(body, error.message, adminUser_load); app_handleError(error); });
+    }
+
+    function adminUser_renderRows(rows) {
+      var body = byId('admin-user-body'); clearElement(body);
+      if (!rows.length) { var tr = createElement('tr'); var td = createElement('td', 'table-empty', 'Belum ada karyawan.'); td.colSpan = 5; tr.appendChild(td); body.appendChild(tr); return; }
+      rows.forEach(function (user) {
+        var tr = createElement('tr');
+        var identity = createElement('td'); identity.appendChild(createElement('strong', '', user.name)); identity.appendChild(createElement('div', 'admin-detail', user.employeeCode)); tr.appendChild(identity);
+        tr.appendChild(createElement('td', '', user.email)); tr.appendChild(createElement('td', '', user.role === 'HR_MANAGER' ? 'HR / Manager' : user.role === 'EMPLOYEE' ? 'Karyawan' : 'Admin'));
+        var status = createElement('td'); status.appendChild(app_badge(user.isActive ? 'Aktif' : 'Nonaktif', user.isActive ? 'Aktif' : 'Nonaktif')); tr.appendChild(status);
+        var actions = createElement('td'); var group = createElement('div', 'admin-action-group'); var edit = createElement('button', 'button button-secondary button-small', 'Edit'); edit.type = 'button'; edit.addEventListener('click', function () { adminUser_edit(user); }); group.appendChild(edit);
+        if (user.isActive) { var deactivate = createElement('button', 'button button-ghost button-small', 'Nonaktifkan'); deactivate.type = 'button'; deactivate.addEventListener('click', function () { app_confirm('Nonaktifkan karyawan?', 'Akun tidak dapat login setelah dinonaktifkan.', 'Nonaktifkan', function () { adminUser_deactivate(user.id); }, true); }); group.appendChild(deactivate); }
+        actions.appendChild(group); tr.appendChild(actions); body.appendChild(tr);
+      });
+    }
+
+    function adminUser_edit(user) {
+      byId('admin-user-id').value = user.id; byId('admin-user-code').value = user.employeeCode || ''; byId('admin-user-name').value = user.name || ''; byId('admin-user-email').value = user.email || ''; byId('admin-user-role').value = user.role || 'EMPLOYEE'; byId('admin-user-join-date').value = user.joinDate || ''; byId('admin-user-department').value = user.department || ''; byId('admin-user-password').value = ''; byId('admin-user-password').required = false; byId('admin-user-submit').textContent = 'Perbarui karyawan'; window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function adminUser_submit() {
+      var id = byId('admin-user-id').value;
+      var payload = { employeeCode: byId('admin-user-code').value.trim(), name: byId('admin-user-name').value.trim(), email: byId('admin-user-email').value.trim(), role: byId('admin-user-role').value, joinDate: byId('admin-user-join-date').value, department: byId('admin-user-department').value.trim(), password: byId('admin-user-password').value };
+      if (!payload.employeeCode || !payload.name || !payload.email || (!id && payload.password.length < 8)) { app_toast('Lengkapi data karyawan. Password baru minimal 8 karakter.', 'error'); return; }
+      if (id && !payload.password) delete payload.password;
+      if (id) payload.userId = id;
+      var button = byId('admin-user-submit'); app_buttonLoading(button, true, 'Menyimpan...');
+      api_post(id ? 'UPDATE_USER' : 'CREATE_USER', payload).then(function (response) { app_toast(response.message, 'success'); adminUser_resetForm(); LocalCache.clearMutable(); adminUser_load(AdminUserState.page); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function adminUser_deactivate(id) {
+      api_post('DEACTIVATE_USER', { userId: id }).then(function (response) { app_toast(response.message, 'success'); LocalCache.clearMutable(); adminUser_load(AdminUserState.page); }).catch(function (error) { app_handleError(error); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: ADMIN-LOKASI ] ============ -->
+  <script>
+    /* PAGE: ADMIN-LOKASI */
+    var AdminLocationState = { page: 1, search: '', rows: [] };
+    var AdminLocationMapState = { map: null, marker: null, circle: null };
+
+    function adminLocation_ensureMap() {
+      if (byId('admin-location-map')) return;
+      var latitude = byId('admin-location-latitude');
+      if (!latitude || !latitude.parentNode || !latitude.parentNode.parentNode) return;
+      var field = createElement('div', 'form-field');
+      field.appendChild(createElement('label', '', 'Pin lokasi pada peta'));
+      var map = createElement('div', 'location-map'); map.id = 'admin-location-map'; map.setAttribute('role', 'application'); map.setAttribute('aria-label', 'Peta untuk memilih titik lokasi'); field.appendChild(map);
+      var actions = createElement('div', 'location-map-actions');
+      var current = createElement('button', 'button button-secondary button-small', 'Gunakan lokasi perangkat'); current.type = 'button'; current.id = 'admin-location-use-current'; actions.appendChild(current);
+      field.appendChild(actions);
+      field.appendChild(createElement('small', '', 'Klik peta untuk memilih titik. Latitude dan longitude akan terisi otomatis.'));
+      latitude.parentNode.parentNode.parentNode.insertBefore(field, latitude.parentNode.parentNode);
+    }
+
+    function adminLocation_updateCircle() {
+      if (!AdminLocationMapState.circle) return;
+      var radius = Number(byId('admin-location-radius').value) || 100;
+      AdminLocationMapState.circle.setRadius(radius);
+    }
+
+    function adminLocation_setPoint(latitude, longitude, zoom) {
+      latitude = Number(latitude); longitude = Number(longitude);
+      if (!isFinite(latitude) || !isFinite(longitude)) return;
+      byId('admin-location-latitude').value = latitude.toFixed(6);
+      byId('admin-location-longitude').value = longitude.toFixed(6);
+      if (!AdminLocationMapState.map || !window.L) return;
+      var point = [latitude, longitude];
+      if (!AdminLocationMapState.marker) AdminLocationMapState.marker = L.marker(point, { title: 'Titik lokasi absensi' }).addTo(AdminLocationMapState.map);
+      else AdminLocationMapState.marker.setLatLng(point);
+      if (!AdminLocationMapState.circle) AdminLocationMapState.circle = L.circle(point, { color: '#C81D25', fillColor: '#C81D25', fillOpacity: 0.14, weight: 2 }).addTo(AdminLocationMapState.map);
+      else AdminLocationMapState.circle.setLatLng(point);
+      adminLocation_updateCircle();
+      AdminLocationMapState.map.setView(point, zoom || Math.max(AdminLocationMapState.map.getZoom(), 15));
+    }
+
+    function adminLocation_initMap() {
+      if (!window.L || !byId('admin-location-map')) return;
+      if (!AdminLocationMapState.map) {
+        AdminLocationMapState.map = L.map('admin-location-map').setView([-6.200000, 106.816666], 12);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(AdminLocationMapState.map);
+        AdminLocationMapState.map.on('click', function (event) { adminLocation_setPoint(event.latlng.lat, event.latlng.lng); });
+        byId('admin-location-radius').addEventListener('input', adminLocation_updateCircle);
+        byId('admin-location-use-current').addEventListener('click', function () {
+          if (!navigator.geolocation) { app_toast('Browser tidak mendukung GPS.', 'error'); return; }
+          navigator.geolocation.getCurrentPosition(function (position) { adminLocation_setPoint(position.coords.latitude, position.coords.longitude, 16); }, function () { app_toast('Lokasi perangkat tidak dapat dibaca.', 'error'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+        });
+      }
+      window.setTimeout(function () { AdminLocationMapState.map.invalidateSize(); }, 80);
+      var latitude = Number(byId('admin-location-latitude').value); var longitude = Number(byId('admin-location-longitude').value);
+      if (isFinite(latitude) && isFinite(longitude)) adminLocation_setPoint(latitude, longitude);
+    }
+
+    function adminLocation_render() { adminLocation_ensureMap(); adminLocation_resetForm(); }
+
+    function adminLocation_init() {
+      var form = byId('admin-location-form');
+      if (form.dataset.bound !== 'true') {
+        form.dataset.bound = 'true'; form.addEventListener('submit', function (event) { event.preventDefault(); adminLocation_submit(); });
+        byId('admin-location-reset').addEventListener('click', adminLocation_resetForm);
+        byId('admin-location-refresh').addEventListener('click', function () { adminLocation_load(1); });
+        byId('admin-location-search').addEventListener('input', app_debounce(function () { AdminLocationState.search = byId('admin-location-search').value.trim(); adminLocation_load(1); }, 350));
+      }
+      adminLocation_initMap();
+      adminLocation_load(AdminLocationState.page || 1);
+    }
+
+    function adminLocation_resetForm() {
+      byId('admin-location-form').reset(); byId('admin-location-id').value = ''; byId('admin-location-radius').value = 100; byId('admin-location-accuracy').value = 100; byId('admin-location-submit').textContent = 'Simpan lokasi';
+      if (AdminLocationMapState.marker && AdminLocationMapState.map) { AdminLocationMapState.map.removeLayer(AdminLocationMapState.marker); AdminLocationMapState.marker = null; }
+      if (AdminLocationMapState.circle && AdminLocationMapState.map) { AdminLocationMapState.map.removeLayer(AdminLocationMapState.circle); AdminLocationMapState.circle = null; }
+      if (AdminLocationMapState.map) { AdminLocationMapState.map.setView([-6.200000, 106.816666], 12); window.setTimeout(function () { AdminLocationMapState.map.invalidateSize(); }, 50); }
+    }
+
+    function adminLocation_load(page) {
+      AdminLocationState.page = page || 1; var body = byId('admin-location-body'); app_skeleton(body, 3);
+      api_post('LIST_LOCATIONS', { page: AdminLocationState.page, limit: 10, search: AdminLocationState.search }).then(function (response) { AdminLocationState.rows = response.data || []; adminLocation_renderRows(AdminLocationState.rows); app_renderPagination(byId('admin-location-pagination'), response.meta, adminLocation_load); }).catch(function (error) { app_errorState(body, error.message, adminLocation_load); app_handleError(error); });
+    }
+
+    function adminLocation_renderRows(rows) {
+      var body = byId('admin-location-body'); clearElement(body);
+      if (!rows.length) { var tr = createElement('tr'); var td = createElement('td', 'table-empty', 'Belum ada lokasi.'); td.colSpan = 5; tr.appendChild(td); body.appendChild(tr); return; }
+      rows.forEach(function (location) {
+        var tr = createElement('tr'); var identity = createElement('td'); identity.appendChild(createElement('strong', '', location.name)); identity.appendChild(createElement('div', 'admin-detail', location.address || 'Alamat belum diisi')); tr.appendChild(identity);
+        tr.appendChild(createElement('td', 'admin-detail', Number(location.latitude).toFixed(5) + ', ' + Number(location.longitude).toFixed(5)));
+        tr.appendChild(createElement('td', '', location.radiusM + ' m'));
+        var status = createElement('td'); status.appendChild(app_badge(location.isActive ? 'Aktif' : 'Nonaktif', location.isActive ? 'Aktif' : 'Nonaktif')); tr.appendChild(status);
+        var actions = createElement('td'); var group = createElement('div', 'admin-action-group'); var edit = createElement('button', 'button button-secondary button-small', 'Edit'); edit.type = 'button'; edit.addEventListener('click', function () { adminLocation_edit(location); }); group.appendChild(edit);
+        if (location.isActive) { var deactivate = createElement('button', 'button button-ghost button-small', 'Nonaktifkan'); deactivate.type = 'button'; deactivate.addEventListener('click', function () { app_confirm('Nonaktifkan lokasi?', 'Jadwal baru tidak dapat menggunakan lokasi ini.', 'Nonaktifkan', function () { adminLocation_deactivate(location.id); }, true); }); group.appendChild(deactivate); }
+        actions.appendChild(group); tr.appendChild(actions); body.appendChild(tr);
+      });
+    }
+
+    function adminLocation_edit(location) {
+      byId('admin-location-id').value = location.id; byId('admin-location-name').value = location.name || ''; byId('admin-location-address').value = location.address || ''; byId('admin-location-radius').value = location.radiusM; byId('admin-location-accuracy').value = location.maxAccuracyM; byId('admin-location-notes').value = location.notes || ''; adminLocation_setPoint(location.latitude, location.longitude); byId('admin-location-submit').textContent = 'Perbarui lokasi'; window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function adminLocation_submit() {
+      var id = byId('admin-location-id').value; var payload = { name: byId('admin-location-name').value.trim(), address: byId('admin-location-address').value.trim(), latitude: Number(byId('admin-location-latitude').value), longitude: Number(byId('admin-location-longitude').value), radiusM: Number(byId('admin-location-radius').value), maxAccuracyM: Number(byId('admin-location-accuracy').value), notes: byId('admin-location-notes').value.trim() };
+      if (!payload.name || !isFinite(payload.latitude) || !isFinite(payload.longitude) || !payload.radiusM || !payload.maxAccuracyM) { app_toast('Lengkapi data lokasi.', 'error'); return; }
+      if (id) payload.locationId = id;
+      var button = byId('admin-location-submit'); app_buttonLoading(button, true, 'Menyimpan...');
+      api_post(id ? 'UPDATE_LOCATION' : 'CREATE_LOCATION', payload).then(function (response) { app_toast(response.message, 'success'); adminLocation_resetForm(); LocalCache.clearMutable(); adminLocation_load(AdminLocationState.page); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function adminLocation_deactivate(id) { api_post('DEACTIVATE_LOCATION', { locationId: id }).then(function (response) { app_toast(response.message, 'success'); LocalCache.clearMutable(); adminLocation_load(AdminLocationState.page); }).catch(function (error) { app_handleError(error); }); }
+  </script>
+
+  <!-- ============ [ PAGE: ADMIN-SHIFT ] ============ -->
+  <script>
+    /* PAGE: ADMIN-SHIFT */
+    var AdminShiftState = { page: 1, search: '', rows: [] };
+
+    function adminShift_render() { adminShift_resetForm(); }
+
+    function adminShift_init() {
+      var form = byId('admin-shift-form');
+      if (form.dataset.bound !== 'true') {
+        form.dataset.bound = 'true'; form.addEventListener('submit', function (event) { event.preventDefault(); adminShift_submit(); });
+        byId('admin-shift-reset').addEventListener('click', adminShift_resetForm);
+        byId('admin-shift-refresh').addEventListener('click', function () { adminShift_load(1); });
+        byId('admin-shift-search').addEventListener('input', app_debounce(function () { AdminShiftState.search = byId('admin-shift-search').value.trim(); adminShift_load(1); }, 350));
+        byId('admin-shift-start').addEventListener('change', adminShift_autoCross);
+        byId('admin-shift-end').addEventListener('change', adminShift_autoCross);
+      }
+      adminShift_load(AdminShiftState.page || 1);
+    }
+
+    function adminShift_resetForm() {
+      byId('admin-shift-form').reset(); byId('admin-shift-id').value = ''; byId('admin-shift-tolerance').value = 0; byId('admin-shift-early').value = 120; byId('admin-shift-window').value = 180; byId('admin-shift-submit').textContent = 'Simpan shift';
+    }
+
+    function adminShift_autoCross() {
+      var start = byId('admin-shift-start').value; var end = byId('admin-shift-end').value;
+      if (start && end && end < start) { byId('admin-shift-cross').checked = true; app_toast('Jam selesai lebih awal dari jam mulai. Cross-midnight diaktifkan.', 'info'); }
+    }
+
+    function adminShift_load(page) {
+      AdminShiftState.page = page || 1; var body = byId('admin-shift-body'); app_skeleton(body, 3);
+      api_post('LIST_SHIFTS', { page: AdminShiftState.page, limit: 10, search: AdminShiftState.search }).then(function (response) { AdminShiftState.rows = response.data || []; adminShift_renderRows(AdminShiftState.rows); app_renderPagination(byId('admin-shift-pagination'), response.meta, adminShift_load); }).catch(function (error) { app_errorState(body, error.message, adminShift_load); app_handleError(error); });
+    }
+
+    function adminShift_renderRows(rows) {
+      var body = byId('admin-shift-body'); clearElement(body);
+      if (!rows.length) { var tr = createElement('tr'); var td = createElement('td', 'table-empty', 'Belum ada shift.'); td.colSpan = 5; tr.appendChild(td); body.appendChild(tr); return; }
+      rows.forEach(function (shift) {
+        var tr = createElement('tr'); var identity = createElement('td'); identity.appendChild(createElement('strong', '', shift.name)); identity.appendChild(createElement('div', 'admin-detail', shift.crossMidnight ? 'Lintas tengah malam' : 'Hari yang sama')); tr.appendChild(identity);
+        tr.appendChild(createElement('td', '', shift.startTime + ' - ' + shift.endTime)); tr.appendChild(createElement('td', '', shift.lateToleranceMinutes + ' menit'));
+        var status = createElement('td'); status.appendChild(app_badge(shift.isActive ? 'Aktif' : 'Nonaktif', shift.isActive ? 'Aktif' : 'Nonaktif')); tr.appendChild(status);
+        var actions = createElement('td'); var group = createElement('div', 'admin-action-group'); var edit = createElement('button', 'button button-secondary button-small', 'Edit'); edit.type = 'button'; edit.addEventListener('click', function () { adminShift_edit(shift); }); group.appendChild(edit);
+        if (shift.isActive) { var deactivate = createElement('button', 'button button-ghost button-small', 'Nonaktifkan'); deactivate.type = 'button'; deactivate.addEventListener('click', function () { app_confirm('Nonaktifkan shift?', 'Jadwal baru tidak dapat menggunakan shift ini.', 'Nonaktifkan', function () { adminShift_deactivate(shift.id); }, true); }); group.appendChild(deactivate); }
+        actions.appendChild(group); tr.appendChild(actions); body.appendChild(tr);
+      });
+    }
+
+    function adminShift_edit(shift) {
+      byId('admin-shift-id').value = shift.id; byId('admin-shift-name').value = shift.name || ''; byId('admin-shift-start').value = shift.startTime || ''; byId('admin-shift-end').value = shift.endTime || ''; byId('admin-shift-cross').checked = Boolean(shift.crossMidnight); byId('admin-shift-tolerance').value = shift.lateToleranceMinutes; byId('admin-shift-early').value = shift.earlyCheckinMinutes; byId('admin-shift-window').value = shift.checkoutWindowMinutes; byId('admin-shift-notes').value = shift.notes || ''; byId('admin-shift-submit').textContent = 'Perbarui shift'; window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function adminShift_submit() {
+      var id = byId('admin-shift-id').value; var payload = { name: byId('admin-shift-name').value.trim(), startTime: byId('admin-shift-start').value, endTime: byId('admin-shift-end').value, crossMidnight: byId('admin-shift-cross').checked, lateToleranceMinutes: Number(byId('admin-shift-tolerance').value), earlyCheckinMinutes: Number(byId('admin-shift-early').value), checkoutWindowMinutes: Number(byId('admin-shift-window').value), notes: byId('admin-shift-notes').value.trim() };
+      if (!payload.name || !payload.startTime || !payload.endTime) { app_toast('Lengkapi data shift.', 'error'); return; }
+      if (id) payload.shiftId = id;
+      var button = byId('admin-shift-submit'); app_buttonLoading(button, true, 'Menyimpan...');
+      api_post(id ? 'UPDATE_SHIFT' : 'CREATE_SHIFT', payload).then(function (response) { app_toast(response.message, 'success'); adminShift_resetForm(); LocalCache.clearMutable(); adminShift_load(AdminShiftState.page); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function adminShift_deactivate(id) { api_post('DEACTIVATE_SHIFT', { shiftId: id }).then(function (response) { app_toast(response.message, 'success'); LocalCache.clearMutable(); adminShift_load(AdminShiftState.page); }).catch(function (error) { app_handleError(error); }); }
+  </script>
+
+  <!-- ============ [ PAGE: ADMIN-JADWAL ] ============ -->
+  <script>
+    /* PAGE: ADMIN-JADWAL */
+    var AdminScheduleState = { page: 1, users: [], shifts: [], locations: [], currentDate: '', aiDraft: null };
+
+    function adminSchedule_buildForm() {
+      var form = byId('admin-schedule-form');
+      if (!form || form.dataset.dayReady === 'true') return;
+      form.dataset.dayReady = 'true';
+      form.innerHTML = '<div><p class="eyebrow">Daily roster</p><h2 class="section-title">Atur jadwal per hari</h2><p class="muted" style="margin:0;font-size:12px">Pilih satu tanggal, centang karyawan yang perlu diatur, lalu simpan sekaligus.</p></div>' +
+        '<div class="schedule-day-toolbar"><div class="form-field"><label for="admin-schedule-day-date">Tanggal</label><input id="admin-schedule-day-date" class="input" type="date" required></div><div class="form-field"><label for="admin-schedule-default-shift">Shift default</label><select id="admin-schedule-default-shift" class="select"></select></div><div class="form-field"><label for="admin-schedule-default-location">Lokasi default</label><select id="admin-schedule-default-location" class="select"></select></div></div>' +
+        '<div class="cluster"><button id="admin-schedule-select-all" class="button button-secondary button-small" type="button">Pilih semua karyawan</button><button id="admin-schedule-clear-all" class="button button-ghost button-small" type="button">Kosongkan pilihan</button><button id="admin-schedule-apply-default" class="button button-secondary button-small" type="button">Terapkan default</button></div>' +
+        '<div class="schedule-ai-box"><div class="cluster"><strong><i data-lucide="sparkles"></i> Buat saran dengan AI</strong><span id="admin-schedule-ai-status" class="schedule-ai-status">Memeriksa konfigurasi AI...</span></div><p>AI membuat draft berdasarkan master dan batasan Anda. Draft tidak masuk ke master sebelum Anda memilih Terapkan.</p><div class="schedule-ai-constraints"><strong>Batasan dan logika</strong><div class="schedule-ai-constraints-grid"><div class="form-field"><label for="admin-schedule-ai-min">Minimum orang per shift</label><input id="admin-schedule-ai-min" class="input" type="number" min="0" max="1000" placeholder="Tidak dibatasi"></div><div class="form-field"><label for="admin-schedule-ai-max">Maksimum orang per shift</label><input id="admin-schedule-ai-max" class="input" type="number" min="0" max="1000" placeholder="Tidak dibatasi"></div></div><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-balance" type="checkbox" checked> Seimbangkan distribusi antar shift</label><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-allow-off" type="checkbox" checked> Izinkan AI memberi jadwal libur</label><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-preserve" type="checkbox" checked> Pertahankan jadwal yang sudah ada</label><label class="cluster" style="font-size:11px"><input id="admin-schedule-ai-department" type="checkbox"> Sebar departemen agar tidak menumpuk di satu shift</label><div><label style="display:block;margin-bottom:6px;font-size:11px;font-weight:700">Shift yang boleh dipakai (kosongkan untuk semua)</label><div id="admin-schedule-ai-shifts" class="schedule-ai-shifts"></div></div></div><textarea id="admin-schedule-ai-prompt" class="textarea" maxlength="1500" placeholder="Aturan tambahan, contoh: tim gudang harus masuk pagi; jangan tempatkan supervisor pada shift malam."></textarea><div class="cluster"><button id="admin-schedule-ai" class="button button-secondary" type="button"><i data-lucide="sparkles"></i>Buat draft AI</button><span id="admin-schedule-ai-result" class="schedule-ai-status"></span></div><div id="admin-schedule-ai-reasoning" class="schedule-ai-status"></div><div id="admin-schedule-ai-draft-actions" class="schedule-ai-draft-actions is-hidden"><button id="admin-schedule-ai-apply" class="button button-primary button-small" type="button"><i data-lucide="check"></i>Terapkan ke master jadwal</button><button id="admin-schedule-ai-discard" class="button button-ghost button-small" type="button">Abaikan draft</button></div></div>' +
+        '<div id="admin-schedule-roster" class="schedule-roster"></div>' +
+        '<button id="admin-schedule-submit" class="button button-primary button-block" type="submit"><i data-lucide="save"></i>Simpan jadwal harian</button>';
+      refreshIcons();
+    }
+
+    function adminSchedule_render() {
+      adminSchedule_buildForm();
+      if (!byId('admin-schedule-month').value) byId('admin-schedule-month').value = app_monthNow();
+      if (!byId('admin-schedule-day-date').value) byId('admin-schedule-day-date').value = app_dateNow();
+    }
+
+    function adminSchedule_init() {
+      adminSchedule_buildForm();
+      var form = byId('admin-schedule-form');
+      if (form.dataset.bound !== 'true') {
+        form.dataset.bound = 'true';
+        form.addEventListener('submit', function (event) { event.preventDefault(); adminSchedule_submit(); });
+        byId('admin-schedule-day-date').addEventListener('change', adminSchedule_loadDay);
+        byId('admin-schedule-select-all').addEventListener('click', function () { document.querySelectorAll('#admin-schedule-roster .schedule-roster-check').forEach(function (input) { input.checked = true; }); });
+        byId('admin-schedule-clear-all').addEventListener('click', function () { document.querySelectorAll('#admin-schedule-roster .schedule-roster-check').forEach(function (input) { input.checked = false; }); });
+        byId('admin-schedule-apply-default').addEventListener('click', adminSchedule_applyDefault);
+        byId('admin-schedule-ai').addEventListener('click', adminSchedule_generateAi);
+        byId('admin-schedule-ai-apply').addEventListener('click', adminSchedule_applyAiDraft);
+        byId('admin-schedule-ai-discard').addEventListener('click', adminSchedule_discardAiDraft);
+        byId('admin-schedule-refresh').addEventListener('click', function () { adminSchedule_load(1); });
+        byId('admin-schedule-month').addEventListener('change', function () { adminSchedule_load(1); });
+      }
+      adminSchedule_loadMasters();
+    }
+
+    function adminSchedule_populateMasters() {
+      var shiftSelect = byId('admin-schedule-default-shift'); var locationSelect = byId('admin-schedule-default-location');
+      clearElement(shiftSelect); clearElement(locationSelect);
+      app_option(shiftSelect, '', 'Pilih shift'); app_option(locationSelect, '', 'Pilih lokasi');
+      AdminScheduleState.shifts.filter(function (shift) { return shift.isActive; }).forEach(function (shift) { app_option(shiftSelect, shift.id, shift.name + ' | ' + shift.startTime + ' - ' + shift.endTime); });
+      AdminScheduleState.locations.filter(function (location) { return location.isActive; }).forEach(function (location) { app_option(locationSelect, location.id, location.name); });
+      adminSchedule_renderAiShiftOptions();
+    }
+
+    function adminSchedule_renderAiShiftOptions() {
+      var container = byId('admin-schedule-ai-shifts'); if (!container) return;
+      clearElement(container);
+      AdminScheduleState.shifts.filter(function (shift) { return shift.isActive; }).forEach(function (shift) {
+        var label = createElement('label', 'schedule-ai-shift-option');
+        var input = document.createElement('input'); input.type = 'checkbox'; input.className = 'admin-schedule-ai-shift'; input.value = shift.id; label.appendChild(input); label.appendChild(createElement('span', '', shift.name)); container.appendChild(label);
+      });
+    }
+
+    function adminSchedule_loadMasters() {
+      Promise.all([api_post('LIST_USERS', { page: 1, limit: 100, role: 'EMPLOYEE', isActive: true }), api_post('LIST_SHIFTS', { page: 1, limit: 100 }), api_post('LIST_LOCATIONS', { page: 1, limit: 100 })]).then(function (responses) {
+        AdminScheduleState.users = responses[0].data || []; AdminScheduleState.shifts = responses[1].data || []; AdminScheduleState.locations = responses[2].data || [];
+        adminSchedule_populateMasters();
+        adminSchedule_loadDay();
+        adminSchedule_load(1);
+        return api_post('GET_AI_STATUS', {});
+      }).then(function (response) {
+        if (response && response.data) byId('admin-schedule-ai-status').textContent = response.data.configured ? 'AI aktif: ' + response.data.model : 'AI belum dikonfigurasi';
+      }).catch(function (error) { app_handleError(error); });
+    }
+
+    function adminSchedule_rowToggle(row) {
+      var type = row.querySelector('.schedule-roster-type'); var isOff = type && type.value === 'OFF';
+      row.classList.toggle('is-off', isOff);
+      row.querySelector('.schedule-roster-shift').disabled = isOff;
+      row.querySelector('.schedule-roster-location').disabled = isOff;
+    }
+
+    function adminSchedule_renderRoster(schedules) {
+      var container = byId('admin-schedule-roster'); clearElement(container);
+      var existing = {}; (schedules || []).forEach(function (schedule) { existing[schedule.userId] = schedule; });
+      if (!AdminScheduleState.users.length) { app_empty(container, 'Belum ada karyawan aktif.', 'users'); return; }
+      AdminScheduleState.users.forEach(function (user) {
+        var schedule = existing[user.id];
+        var row = createElement('div', 'schedule-roster-row'); row.dataset.scheduleRow = 'true'; row.dataset.userId = user.id;
+        var check = document.createElement('input'); check.type = 'checkbox'; check.className = 'schedule-roster-check'; check.checked = Boolean(schedule); check.setAttribute('aria-label', 'Pilih ' + user.name); row.appendChild(check);
+        var identity = createElement('div', 'schedule-roster-identity'); identity.appendChild(createElement('strong', '', user.name)); identity.appendChild(createElement('span', '', user.employeeCode + (user.department ? ' | ' + user.department : ''))); row.appendChild(identity);
+        var type = document.createElement('select'); type.className = 'select schedule-roster-type'; app_option(type, 'WORK', 'Kerja'); app_option(type, 'OFF', 'Libur'); type.value = schedule ? schedule.scheduleType : 'WORK'; type.addEventListener('change', function () { adminSchedule_rowToggle(row); }); row.appendChild(type);
+        var shift = document.createElement('select'); shift.className = 'select schedule-roster-shift'; app_option(shift, '', 'Pilih shift'); AdminScheduleState.shifts.filter(function (item) { return item.isActive; }).forEach(function (item) { app_option(shift, item.id, item.name + ' | ' + item.startTime + '-' + item.endTime); }); shift.value = schedule ? schedule.shiftId || '' : byId('admin-schedule-default-shift').value; row.appendChild(shift);
+        var location = document.createElement('select'); location.className = 'select schedule-roster-location'; app_option(location, '', 'Pilih lokasi'); AdminScheduleState.locations.filter(function (item) { return item.isActive; }).forEach(function (item) { app_option(location, item.id, item.name); }); location.value = schedule && schedule.location ? schedule.location.id : byId('admin-schedule-default-location').value; row.appendChild(location);
+        var notes = document.createElement('input'); notes.className = 'input schedule-roster-notes'; notes.type = 'text'; notes.maxLength = 500; notes.placeholder = 'Catatan'; notes.value = schedule ? schedule.notes || '' : ''; row.appendChild(notes);
+        container.appendChild(row); adminSchedule_rowToggle(row);
+      });
+      refreshIcons();
+    }
+
+    function adminSchedule_loadDay() {
+      var date = byId('admin-schedule-day-date').value;
+      if (!date || !AdminScheduleState.users.length) return Promise.resolve();
+      if (AdminScheduleState.currentDate && AdminScheduleState.currentDate !== date) adminSchedule_clearAiDraftUi();
+      AdminScheduleState.currentDate = date;
+      app_skeleton(byId('admin-schedule-roster'), 5);
+      return api_post('LIST_SCHEDULES', { workDate: date, page: 1, limit: 100 }).then(function (response) { adminSchedule_renderRoster(response.data || []); }).catch(function (error) { app_errorState(byId('admin-schedule-roster'), error.message, adminSchedule_loadDay); app_handleError(error); });
+    }
+
+    function adminSchedule_applyDefault() {
+      var shiftId = byId('admin-schedule-default-shift').value; var locationId = byId('admin-schedule-default-location').value; var selected = document.querySelectorAll('#admin-schedule-roster .schedule-roster-check:checked');
+      if (!selected.length) { app_toast('Pilih karyawan terlebih dahulu.', 'error'); return; }
+      if (!shiftId || !locationId) { app_toast('Pilih shift dan lokasi default terlebih dahulu.', 'error'); return; }
+      selected.forEach(function (check) { var row = check.closest('[data-schedule-row]'); row.querySelector('.schedule-roster-type').value = 'WORK'; row.querySelector('.schedule-roster-shift').value = shiftId; row.querySelector('.schedule-roster-location').value = locationId; adminSchedule_rowToggle(row); });
+    }
+
+    function adminSchedule_findRow(userId) {
+      var rows = document.querySelectorAll('#admin-schedule-roster [data-schedule-row]');
+      for (var i = 0; i < rows.length; i++) if (rows[i].dataset.userId === userId) return rows[i];
+      return null;
+    }
+
+    function adminSchedule_readAiConstraints() {
+      var min = Number(byId('admin-schedule-ai-min').value || 0); var max = Number(byId('admin-schedule-ai-max').value || 0);
+      if (!isFinite(min) || min < 0 || Math.floor(min) !== min) min = 0;
+      if (!isFinite(max) || max < 0 || Math.floor(max) !== max) max = 0;
+      return {
+        minStaffPerShift: min, maxStaffPerShift: max,
+        preferredShiftIds: Array.prototype.slice.call(document.querySelectorAll('.admin-schedule-ai-shift:checked')).map(function (input) { return input.value; }),
+        balanceShifts: byId('admin-schedule-ai-balance').checked,
+        allowOff: byId('admin-schedule-ai-allow-off').checked,
+        preserveExisting: byId('admin-schedule-ai-preserve').checked,
+        avoidSameDepartment: byId('admin-schedule-ai-department').checked,
+        logic: byId('admin-schedule-ai-prompt').value.trim()
+      };
+    }
+
+    function adminSchedule_clearAiDraftUi() {
+      AdminScheduleState.aiDraft = null;
+      byId('admin-schedule-ai-draft-actions').classList.add('is-hidden');
+      byId('admin-schedule-ai-reasoning').textContent = '';
+      byId('admin-schedule-ai-result').textContent = '';
+    }
+
+    function adminSchedule_applyAiPlan(data) {
+      var assignments = data && Array.isArray(data.assignments) ? data.assignments : [];
+      AdminScheduleState.aiDraft = { workDate: data.workDate, assignments: assignments.slice(), warnings: (data.warnings || []).slice(), reasoning: data.reasoning || '', constraints: data.constraints || null };
+      assignments.forEach(function (assignment) {
+        var row = adminSchedule_findRow(assignment.userId); if (!row) return;
+        row.querySelector('.schedule-roster-check').checked = true;
+        row.querySelector('.schedule-roster-type').value = assignment.scheduleType || 'WORK';
+        row.querySelector('.schedule-roster-shift').value = assignment.shiftId || '';
+        row.querySelector('.schedule-roster-location').value = assignment.locationId || '';
+        row.querySelector('.schedule-roster-notes').value = assignment.notes || '';
+        adminSchedule_rowToggle(row);
+      });
+      var warnings = data && data.warnings && data.warnings.length ? ' ' + data.warnings.join(' ') : '';
+      byId('admin-schedule-ai-result').textContent = assignments.length + ' saran menjadi draft. Belum disimpan ke master.' + warnings;
+      byId('admin-schedule-ai-reasoning').textContent = data.reasoning ? 'Logika AI: ' + data.reasoning : '';
+      byId('admin-schedule-ai-draft-actions').classList.remove('is-hidden');
+      if (warnings) app_toast('AI memberi beberapa peringatan. Periksa roster.', 'info');
+    }
+
+    function adminSchedule_discardAiDraft() {
+      adminSchedule_clearAiDraftUi();
+      adminSchedule_loadDay();
+      app_toast('Draft AI diabaikan. Master jadwal tidak berubah.', 'info');
+    }
+
+    function adminSchedule_applyAiDraft() {
+      var draft = AdminScheduleState.aiDraft;
+      if (!draft || !draft.assignments.length) { app_toast('Belum ada draft AI untuk diterapkan.', 'error'); return; }
+      var button = byId('admin-schedule-ai-apply'); app_buttonLoading(button, true, 'Menerapkan...');
+      api_post('APPLY_AI_SCHEDULE', { workDate: draft.workDate, items: draft.assignments }).then(function (response) {
+        var failures = (response.data || []).filter(function (item) { return item && item.success === false; });
+        app_toast(failures.length ? failures.length + ' jadwal gagal diterapkan.' : response.message, failures.length ? 'error' : 'success');
+        if (!failures.length) adminSchedule_clearAiDraftUi();
+        LocalCache.clearMutable(); adminSchedule_loadDay(); adminSchedule_load(AdminScheduleState.page);
+      }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function adminSchedule_generateAi() {
+      var date = byId('admin-schedule-day-date').value; if (!date) { app_toast('Pilih tanggal jadwal.', 'error'); return; }
+      var constraints = adminSchedule_readAiConstraints();
+      if (constraints.minStaffPerShift && constraints.maxStaffPerShift && constraints.minStaffPerShift > constraints.maxStaffPerShift) { app_toast('Minimum orang per shift tidak boleh melebihi maksimum.', 'error'); return; }
+      var button = byId('admin-schedule-ai'); app_buttonLoading(button, true, 'Menyusun...'); byId('admin-schedule-ai-result').textContent = '';
+      api_post('GENERATE_AI_SCHEDULE', { workDate: date, constraints: constraints }).then(function (response) { adminSchedule_applyAiPlan(response.data || {}); app_toast(response.message, 'success'); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+
+    function adminSchedule_load(page) {
+      AdminScheduleState.page = page || 1; var body = byId('admin-schedule-body'); app_skeleton(body, 5);
+      api_post('LIST_SCHEDULES', { month: byId('admin-schedule-month').value || app_monthNow(), page: AdminScheduleState.page, limit: 12 }).then(function (response) { adminSchedule_renderRows(response.data || []); app_renderPagination(byId('admin-schedule-pagination'), response.meta, adminSchedule_load); }).catch(function (error) { app_errorState(body, error.message, adminSchedule_load); app_handleError(error); });
+    }
+
+    function adminSchedule_renderRows(rows) {
+      var body = byId('admin-schedule-body'); clearElement(body);
+      if (!rows.length) { var tr = createElement('tr'); var td = createElement('td', 'table-empty', 'Belum ada jadwal pada bulan ini.'); td.colSpan = 5; tr.appendChild(td); body.appendChild(tr); return; }
+      rows.forEach(function (schedule) {
+        var tr = createElement('tr'); tr.appendChild(createElement('td', '', app_displayDate(schedule.workDate)));
+        tr.appendChild(createElement('td', '', schedule.user ? schedule.user.name : '-')); tr.appendChild(createElement('td', '', schedule.scheduleType === 'OFF' ? 'Libur' : schedule.shiftName + ' (' + schedule.startTime + '-' + schedule.endTime + ')')); tr.appendChild(createElement('td', '', schedule.location ? schedule.location.name : '-'));
+        var action = createElement('td'); var button = createElement('button', 'button button-secondary button-small', 'Edit'); button.type = 'button'; button.addEventListener('click', function () { adminSchedule_edit(schedule); }); action.appendChild(button); tr.appendChild(action); body.appendChild(tr);
+      });
+    }
+
+    function adminSchedule_edit(schedule) {
+      byId('admin-schedule-day-date').value = schedule.workDate || '';
+      adminSchedule_loadDay().then(function () {
+        var row = adminSchedule_findRow(schedule.userId); if (!row) return;
+        row.querySelector('.schedule-roster-check').checked = true; row.querySelector('.schedule-roster-type').value = schedule.scheduleType || 'WORK'; row.querySelector('.schedule-roster-shift').value = schedule.shiftId || ''; row.querySelector('.schedule-roster-location').value = schedule.location ? schedule.location.id : ''; row.querySelector('.schedule-roster-notes').value = schedule.notes || ''; adminSchedule_rowToggle(row); window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    function adminSchedule_submit() {
+      var date = byId('admin-schedule-day-date').value; var items = [];
+      document.querySelectorAll('#admin-schedule-roster [data-schedule-row]').forEach(function (row) {
+        if (!row.querySelector('.schedule-roster-check').checked) return;
+        items.push({ userId: row.dataset.userId, workDate: date, scheduleType: row.querySelector('.schedule-roster-type').value, shiftId: row.querySelector('.schedule-roster-shift').value, locationId: row.querySelector('.schedule-roster-location').value, notes: row.querySelector('.schedule-roster-notes').value.trim() });
+      });
+      if (!date || !items.length) { app_toast('Pilih tanggal dan minimal satu karyawan.', 'error'); return; }
+      var invalid = items.some(function (item) { return item.scheduleType === 'WORK' && (!item.shiftId || !item.locationId); });
+      if (invalid) { app_toast('Setiap karyawan dengan status kerja wajib memiliki shift dan lokasi.', 'error'); return; }
+      var button = byId('admin-schedule-submit'); app_buttonLoading(button, true, 'Menyimpan...');
+      api_post('BULK_UPSERT_SCHEDULES', { items: items }).then(function (response) { var failures = (response.data || []).filter(function (item) { return item && item.success === false; }); app_toast(failures.length ? failures.length + ' jadwal gagal disimpan.' : response.message, failures.length ? 'error' : 'success'); if (!failures.length) adminSchedule_clearAiDraftUi(); LocalCache.clearMutable(); adminSchedule_loadDay(); adminSchedule_load(AdminScheduleState.page); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: ADMIN-PENGAJUAN ] ============ -->
+  <script>
+    /* PAGE: ADMIN-PENGAJUAN */
+    var AdminRequestState = { page: 1 };
+
+    function adminRequest_render() { }
+
+    function adminRequest_init() {
+      if (byId('admin-request-refresh').dataset.bound !== 'true') {
+        byId('admin-request-refresh').dataset.bound = 'true'; byId('admin-request-refresh').addEventListener('click', function () { adminRequest_load(1); }); byId('admin-request-status').addEventListener('change', function () { adminRequest_load(1); });
+      }
+      adminRequest_load(AdminRequestState.page || 1);
+    }
+
+    function adminRequest_load(page) {
+      AdminRequestState.page = page || 1; var container = byId('admin-request-list'); app_skeleton(container, 4);
+      api_post('LIST_LEAVE_REQUESTS', { page: AdminRequestState.page, limit: 10, status: byId('admin-request-status').value }).then(function (response) { adminRequest_renderList(response.data || []); app_renderPagination(byId('admin-request-pagination'), response.meta, adminRequest_load); }).catch(function (error) { app_errorState(container, error.message, adminRequest_load); app_handleError(error); });
+    }
+
+    function adminRequest_renderList(requests) {
+      var container = byId('admin-request-list'); clearElement(container);
+      if (!requests.length) { app_empty(container, 'Tidak ada pengajuan pada filter ini.', 'clipboard-check'); return; }
+      requests.forEach(function (request) {
+        var item = createElement('article', 'approval-item'); var header = createElement('div', 'approval-header'); var identity = createElement('div'); identity.appendChild(createElement('strong', '', request.user ? request.user.name : 'Karyawan')); identity.appendChild(createElement('span', '', pengajuan_typeLabel(request.type) + ' | ' + app_displayDate(request.startDate) + ' - ' + app_displayDate(request.endDate))); header.appendChild(identity); header.appendChild(app_badge(request.status, request.status === 'PENDING' ? 'Menunggu' : request.status === 'APPROVED' ? 'Disetujui' : request.status === 'REJECTED' ? 'Ditolak' : 'Dibatalkan')); item.appendChild(header); item.appendChild(createElement('p', 'admin-detail', request.reason));
+        if (request.hasAttachment) { var attachment = createElement('button', 'button button-secondary button-small', 'Lihat foto lampiran'); attachment.type = 'button'; attachment.addEventListener('click', function () { app_openLeavePhoto(request.id); }); item.appendChild(attachment); }
+        if (request.reviewerNote) item.appendChild(createElement('p', 'admin-detail', 'Catatan: ' + request.reviewerNote));
+        if (request.status === 'PENDING') { var actions = createElement('div', 'approval-actions'); var approve = createElement('button', 'button button-primary button-small', 'Setujui'); approve.type = 'button'; approve.addEventListener('click', function () { adminRequest_review(request, 'APPROVED'); }); var reject = createElement('button', 'button button-danger button-small', 'Tolak'); reject.type = 'button'; reject.addEventListener('click', function () { adminRequest_review(request, 'REJECTED'); }); actions.appendChild(approve); actions.appendChild(reject); item.appendChild(actions); }
+        container.appendChild(item);
+      }); refreshIcons();
+    }
+
+    function adminRequest_review(request, decision) {
+      var body = createElement('div'); body.appendChild(createElement('p', 'muted', 'Karyawan: ' + (request.user ? request.user.name : '-') + '\nPengajuan: ' + request.type));
+      var label = createElement('label', '', 'Catatan reviewer'); label.setAttribute('for', 'admin-review-note'); var textarea = createElement('textarea', 'textarea'); textarea.id = 'admin-review-note'; textarea.placeholder = 'Opsional'; body.appendChild(label); body.appendChild(textarea);
+      var cancel = createElement('button', 'button button-secondary', 'Batal'); cancel.type = 'button'; cancel.addEventListener('click', app_closeModal); var confirm = createElement('button', 'button ' + (decision === 'APPROVED' ? 'button-primary' : 'button-danger'), decision === 'APPROVED' ? 'Setujui' : 'Tolak'); confirm.type = 'button'; confirm.addEventListener('click', function () { var note = textarea.value.trim(); app_closeModal(); api_post('REVIEW_LEAVE_REQUEST', { requestId: request.id, decision: decision, reviewerNote: note }).then(function (response) { app_toast(response.message, 'success'); adminRequest_load(AdminRequestState.page); }).catch(function (error) { app_handleError(error); }); });
+      app_openModal(decision === 'APPROVED' ? 'Setujui pengajuan' : 'Tolak pengajuan', body, [cancel, confirm]);
+    }
+  </script>
+
+  <!-- ============ [ PAGE: ADMIN-KOREKSI ] ============ -->
+  <script>
+    /* PAGE: ADMIN-KOREKSI */
+    var AdminCorrectionState = { page: 1 };
+
+    function adminCorrection_render() { if (!byId('admin-correction-month').value) byId('admin-correction-month').value = app_monthNow(); }
+
+    function adminCorrection_init() {
+      if (byId('admin-correction-refresh').dataset.bound !== 'true') {
+        byId('admin-correction-refresh').dataset.bound = 'true'; byId('admin-correction-refresh').addEventListener('click', function () { adminCorrection_load(1); }); byId('admin-correction-month').addEventListener('change', function () { adminCorrection_load(1); }); byId('admin-correction-form').addEventListener('submit', function (event) { event.preventDefault(); adminCorrection_submit(); });
+      }
+      adminCorrection_load(AdminCorrectionState.page || 1);
+    }
+
+    function adminCorrection_load(page) {
+      AdminCorrectionState.page = page || 1; var body = byId('admin-correction-body'); app_skeleton(body, 4);
+      api_post('LIST_ATTENDANCE', { month: byId('admin-correction-month').value || app_monthNow(), page: AdminCorrectionState.page, limit: 12 }).then(function (response) { adminCorrection_renderRows(response.data || []); app_renderPagination(byId('admin-correction-pagination'), response.meta, adminCorrection_load); }).catch(function (error) { app_errorState(body, error.message, adminCorrection_load); app_handleError(error); });
+    }
+
+    function adminCorrection_localInput(value) {
+      if (!value) return '';
+      var date = new Date(value); if (isNaN(date.getTime())) return '';
+      var parts = new Intl.DateTimeFormat('en-CA', { timeZone: CONFIG.TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(date); var result = {}; parts.forEach(function (part) { result[part.type] = part.value; });
+      return result.year + '-' + result.month + '-' + result.day + 'T' + result.hour + ':' + result.minute;
+    }
+
+    function adminCorrection_renderRows(rows) {
+      var body = byId('admin-correction-body'); clearElement(body);
+      if (!rows.length) { var tr = createElement('tr'); var td = createElement('td', 'table-empty', 'Belum ada attendance record.'); td.colSpan = 7; tr.appendChild(td); body.appendChild(tr); return; }
+      rows.forEach(function (row) {
+        var tr = createElement('tr'); tr.appendChild(createElement('td', 'admin-detail', row.id)); tr.appendChild(createElement('td', '', app_displayDate(row.workDate))); tr.appendChild(createElement('td', '', row.user ? row.user.name : '-')); tr.appendChild(createElement('td', '', app_displayDateTime(row.checkInAt))); tr.appendChild(createElement('td', '', app_displayDateTime(row.checkOutAt))); var status = createElement('td'); status.appendChild(app_badge(row.status === 'TERLAMBAT' ? 'Terlambat' : 'Tepat Waktu')); tr.appendChild(status); var action = createElement('td'); var button = createElement('button', 'button button-secondary button-small', 'Pilih'); button.type = 'button'; button.addEventListener('click', function () { adminCorrection_select(row); }); action.appendChild(button); tr.appendChild(action); body.appendChild(tr);
+      }); refreshIcons();
+    }
+
+    function adminCorrection_select(row) {
+      byId('admin-correction-id').value = row.id; byId('admin-correction-in').value = adminCorrection_localInput(row.checkInAt); byId('admin-correction-out').value = adminCorrection_localInput(row.checkOutAt); byId('admin-correction-reason').focus(); window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function adminCorrection_toApi(value) { return value ? value + ':00+07:00' : ''; }
+
+    function adminCorrection_submit() {
+      var payload = { attendanceId: byId('admin-correction-id').value.trim(), checkInAt: adminCorrection_toApi(byId('admin-correction-in').value), checkOutAt: adminCorrection_toApi(byId('admin-correction-out').value), reason: byId('admin-correction-reason').value.trim() };
+      if (!payload.attendanceId || !payload.reason) { app_toast('Attendance ID dan alasan wajib diisi.', 'error'); return; }
+      var button = byId('admin-correction-submit'); app_buttonLoading(button, true, 'Menyimpan...');
+      api_post('CORRECT_ATTENDANCE', payload).then(function (response) { app_toast(response.message, 'success'); byId('admin-correction-form').reset(); LocalCache.clearMutable(); adminCorrection_load(AdminCorrectionState.page); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: ADMIN-PENGATURAN ] ============ -->
+  <script>
+    /* PAGE: ADMIN-PENGATURAN */
+    function adminSettings_render() { app_skeleton(byId('admin-settings-list'), 4); }
+    function adminSettings_init() { adminSettings_load(); }
+
+    function adminSettings_load() {
+      var container = byId('admin-settings-list'); app_skeleton(container, 4);
+      api_post('GET_SETTINGS', {}).then(function (response) { adminSettings_renderList(response.data || []); }).catch(function (error) { app_errorState(container, error.message, adminSettings_load); app_handleError(error); });
+    }
+
+    function adminSettings_renderList(settings) {
+      var container = byId('admin-settings-list'); clearElement(container);
+      if (!settings.length) { app_empty(container, 'Belum ada pengaturan.', 'settings-2'); return; }
+      settings.forEach(function (setting) {
+        var card = createElement('div', 'card card-padding'); var heading = createElement('div'); heading.appendChild(createElement('h2', 'section-title', setting.key)); heading.appendChild(createElement('p', 'muted', setting.description)); card.appendChild(heading);
+        var field = createElement('div', 'form-field'); var input;
+        if (setting.type === 'BOOLEAN') { var label = createElement('label', 'cluster'); input = document.createElement('input'); input.type = 'checkbox'; input.checked = Boolean(setting.boolean); label.appendChild(input); label.appendChild(createElement('span', '', 'Aktif')); field.appendChild(label); }
+        else { input = createElement(setting.type === 'TEXT' ? 'input' : 'input', setting.type === 'TEXT' ? 'input' : 'input'); input.className = 'input'; input.type = setting.type === 'NUMBER' ? 'number' : 'text'; input.value = setting.type === 'NUMBER' ? (setting.number === null ? '' : setting.number) : setting.text; field.appendChild(input); }
+        var button = createElement('button', 'button button-primary button-small', 'Simpan'); button.type = 'button'; button.style.marginTop = '10px'; button.addEventListener('click', function () { adminSettings_update(setting, input, button); }); field.appendChild(button); card.appendChild(field); container.appendChild(card);
+      }); refreshIcons();
+    }
+
+    function adminSettings_update(setting, input, button) {
+      var value = setting.type === 'BOOLEAN' ? input.checked : input.value;
+      app_buttonLoading(button, true, 'Menyimpan...'); api_post('UPDATE_SETTINGS', { settingKey: setting.key, value: value }).then(function (response) { app_toast(response.message, 'success'); }).catch(function (error) { app_handleError(error); }).finally(function () { app_buttonLoading(button, false); });
+    }
+  </script>
+
+  <!-- ============ [ PAGE: REGISTRY ] ============ -->
+  <script>
+    /* PAGE: REGISTRY */
+    var PAGES = {
+      'login': { title: 'Login', render: login_render, init: login_init },
+      'forgot-password': { title: 'Reset Password', render: forgotPassword_render, init: forgotPassword_init },
+      'reset-password': { title: 'Password Baru', render: resetPassword_render, init: resetPassword_init },
+      '404': { title: 'Halaman Tidak Ditemukan', render: function () {}, init: function () {} },
+      'dashboard': { title: 'Dashboard', protected: true, render: dashboard_render, init: dashboard_init },
+      'absensi': { title: 'Absensi', protected: true, render: absensi_render, init: absensi_init },
+      'pengajuan': { title: 'Pengajuan', protected: true, render: pengajuan_render, init: pengajuan_init },
+      'rekap': { title: 'Rekap', protected: true, render: rekap_render, init: rekap_init },
+      'profil': { title: 'Profil', protected: true, render: profil_render, init: profil_init },
+      'admin/karyawan': { title: 'Master Karyawan', protected: true, roles: ['ADMIN'], render: adminUser_render, init: adminUser_init },
+      'admin/lokasi': { title: 'Lokasi Geofence', protected: true, roles: ['ADMIN'], render: adminLocation_render, init: adminLocation_init },
+      'admin/shift': { title: 'Master Shift', protected: true, roles: ['ADMIN'], render: adminShift_render, init: adminShift_init },
+      'admin/jadwal': { title: 'Jadwal Kerja', protected: true, roles: ['ADMIN', 'HR_MANAGER'], render: adminSchedule_render, init: adminSchedule_init },
+      'admin/pengajuan': { title: 'Approval Pengajuan', protected: true, roles: ['ADMIN', 'HR_MANAGER'], render: adminRequest_render, init: adminRequest_init },
+      'admin/koreksi': { title: 'Koreksi Absensi', protected: true, roles: ['ADMIN', 'HR_MANAGER'], render: adminCorrection_render, init: adminCorrection_init },
+      'admin/pengaturan': { title: 'Pengaturan', protected: true, roles: ['ADMIN'], render: adminSettings_render, init: adminSettings_init }
+    };
+  </script>
+</body>
+</html>
