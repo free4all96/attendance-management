@@ -1238,7 +1238,7 @@
 
     function app_logout() {
       var token = AppState.token;
-      if (token && CONFIG.GAS_WEBAPP_URL.indexOf('PASTE_') !== 0) {
+      if (token && CONFIG.GAS_WEBAPP_URL.indexOf('https://script.google.com/macros/s/AKfycbwafEo1ZLUhGCBBnxfJIlrZndwL0n4bj5mOXEQfcuZSIbvWkqVoeTbuAEi7nXDLKpWOzQ/exec') !== 0) {
         api_post('LOGOUT', {}, token).catch(function () { /* Local logout still completes. */ }).finally(function () { app_clearSession(true); });
       } else {
         app_clearSession(true);
